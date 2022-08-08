@@ -6,6 +6,8 @@
             [java-time :as t]
             [taoensso.timbre :as log]))
 
+(log/merge-config! {:ns-filter #{"incidents.*"}})
+
 (defn start-xtdb! [dir]
   (letfn [(kv-store [d]
             {:kv-store {:xtdb/module 'xtdb.rocksdb/->kv-store
@@ -96,6 +98,7 @@
         "clear"
         (doall (map #(log/info %) (clear-all-stage xtdb-node)))
         (log/info "list|load|clear")))))
+
 
 (comment
 
