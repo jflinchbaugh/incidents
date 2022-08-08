@@ -3,6 +3,7 @@
   (:require [feedparser-clj.core :as feed]
             [clojure.java.io :as io]
             [xtdb.api :as xt]
+            [clojure.pprint :as pp]
             [java-time :as t]
             [taoensso.timbre :as log]))
 
@@ -100,7 +101,8 @@
         (doall (map #(log/info %) (load-stage xtdb-node)))
         "list"
         (let [stage (get-all-stage xtdb-node)]
-          (doall (map #(log/info %) (conj stage (str "Count: " (count stage))))))
+          (pp/pprint stage)
+          (println (str "Count: " (count stage))))
         "clear"
         (doall (map #(log/info %) (clear-all-stage xtdb-node)))
         (log/info "list|load|clear")))))
