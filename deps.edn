@@ -6,7 +6,8 @@
   com.xtdb/xtdb-core {:mvn/version "1.21.0.1"}
   com.xtdb/xtdb-rocksdb {:mvn/version "1.21.0.1"}
   com.taoensso/timbre {:mvn/version "5.2.1"}}
- 
+ :paths ["src" "test"]
+
  :aliases
  {
   :project/run {:exec-fn incidents.core/-main}
