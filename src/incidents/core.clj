@@ -94,9 +94,6 @@
         "list"
         (let [entries (get-all-entries xtdb-node)]
           (map prn (conj entries (str "Count: " (count entries)))))
-        "history"
-        (let [entries (get-all-entries xtdb-node)]
-          (map prn (conj entries (str "Count: " (count entries)))))
         "clear"
         (map prn (clear-all-entries xtdb-node))
         (prn "list|load|clear")))))
