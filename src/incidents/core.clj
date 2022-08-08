@@ -16,11 +16,11 @@
       :xtdb/document-store (kv-store (io/file dir "doc-store"))
       :xtdb/index-store (kv-store (io/file dir "index-store"))})))
 
-(defn add-stage-id [stage]
-  (assoc stage :xt/id {:type :stage :uri (:uri stage)}))
-
 (defn tag [type rec]
   (assoc rec :type type))
+
+(defn add-stage-id [stage]
+  (assoc stage :xt/id (tag :stage {:uri (:uri stage)})))
 
 (defn prune [rec]
   (into {}
