@@ -5,7 +5,10 @@
   clojure.java-time/clojure.java-time {:mvn/version "0.3.3"}
   com.xtdb/xtdb-core {:mvn/version "1.21.0.1"}
   com.xtdb/xtdb-rocksdb {:mvn/version "1.21.0.1"}
-  com.taoensso/timbre {:mvn/version "5.2.1"}}
+  com.taoensso/timbre {:mvn/version "5.2.1"}
+  org.slf4j/slf4j-nop {:mvn/version "1.7.36"}
+ }
+
  :paths ["src" "test"]
 
  :aliases
