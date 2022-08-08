@@ -1,7 +1,14 @@
-{:deps
+{
+ :deps
  {org.clojure/clojure {:mvn/version "1.11.1"}
-  org.clojars.gnzh/feedparser-clj {:mvn/version "0.6.0"}
+  org.clojars.gnzh/feedparser-clj {:mvn/version "0.6.1"}
   clojure.java-time/clojure.java-time {:mvn/version "0.3.3"}
   com.xtdb/xtdb-core {:mvn/version "1.21.0.1"}
-  com.xtdb/xtdb-rocksdb {:mvn/version "1.21.0.1"}}
- }
+  com.xtdb/xtdb-rocksdb {:mvn/version "1.21.0.1"}
+  com.taoensso/timbre {:mvn/version "5.2.1"}}
+ 
+ :aliases
+ {
+  :project/run {:exec-fn incidents.core/-main}
+  }
+}
