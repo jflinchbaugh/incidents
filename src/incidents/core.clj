@@ -75,12 +75,18 @@
   (let [new-stage (->>
                      "https://webcad.lcwc911.us/Pages/Public/LiveIncidentsFeed.aspx"
                      feed/parse-feed
-                     :entries)
+                     :entries
+                     (map add-stage-id))
         new-stage-ids (set (map :xt/id new-stage))
         existing-stage-ids (get-all-stage-ids node)
-        removals (delete-stage
-                  node
-                  (remove new-stage-ids existing-stage-ids))]
+        ids-to-remove (remove new-stage-ids existing-stage-ids)
+        removals (delete-stage node ids-to-remove)
+        _ (log/info
+            (str
+              "Updated "
+              (count new-stage)
+              " and Removed "
+              (count ids-to-remove)))]
     (->>
      new-stage
      (map (partial put-stage node))
