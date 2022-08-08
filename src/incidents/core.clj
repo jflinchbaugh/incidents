@@ -17,8 +17,8 @@
 (defn stop-xtdb! [node]
   (.close node))
 
-(defn add-entry-id [entry]
-  (assoc entry :xt/id (:uri entry)))
+(defn add-stage-id [stage]
+  (assoc stage :xt/id {:type :stage :uri (:uri stage)}))
 
 (defn tag [type rec]
   (assoc rec :type type))
@@ -35,54 +35,54 @@
               (coll? v))
              (empty? v)))) rec)))
 
-(defn put-entry [node entry]
+(defn put-stage [node stage]
   (xt/await-tx
    node
    (xt/submit-tx
     node
-    [[::xt/put (->> entry prune (tag :entry) add-entry-id)]])))
+    [[::xt/put (->> stage prune (tag :stage) add-stage-id)]])))
 
-(defn get-all-entries [node]
+(defn get-all-stage [node]
   (->>
    (xt/q (xt/db node) '{:find [(pull e [*])]
-                        :where [[e :type :entry]]})
+                        :where [[e :type :stage]]})
    (mapv first)))
 
-(defn get-all-entry-ids [node]
+(defn get-all-stage-ids [node]
   (->>
    (xt/q
     (xt/db node)
     '{:find [e]
-      :where [[e :type :entry]]})
+      :where [[e :type :stage]]})
    (map first)))
 
-(defn clear-all-entries [node]
+(defn clear-all-stage [node]
   (->>
-   (get-all-entry-ids node)
+   (get-all-stage-ids node)
    (mapv (fn [i] [::xt/evict i]))
    (xt/submit-tx node)
    (xt/await-tx node)))
 
-(defn delete-entries [node ids]
+(defn delete-stage [node ids]
   (->>
    ids
    (mapv (fn [i] [::xt/delete i]))
    (xt/submit-tx node)
    (xt/await-tx node)))
 
-(defn load-entries [node]
-  (let [new-entries (->>
+(defn load-stage [node]
+  (let [new-stage (->>
                      "https://webcad.lcwc911.us/Pages/Public/LiveIncidentsFeed.aspx"
                      feed/parse-feed
                      :entries)
-        new-entry-ids (set (map :xt/id new-entries))
-        existing-entry-ids (get-all-entry-ids node)
-        removals (delete-entries
+        new-stage-ids (set (map :xt/id new-stage))
+        existing-stage-ids (get-all-stage-ids node)
+        removals (delete-stage
                   node
-                  (remove new-entry-ids existing-entry-ids))]
+                  (remove new-stage-ids existing-stage-ids))]
     (->>
-     new-entries
-     (map (partial put-entry node))
+     new-stage
+     (map (partial put-stage node))
      doall)))
 
 (defn -main [& args]
@@ -90,12 +90,12 @@
     (with-open [xtdb-node (start-xtdb! "data")]
       (case action
         "load"
-        (load-entries xtdb-node)
+        (load-stage xtdb-node)
         "list"
-        (let [entries (get-all-entries xtdb-node)]
-          (map prn (conj entries (str "Count: " (count entries)))))
+        (let [stage (get-all-stage xtdb-node)]
+          (map prn (conj stage (str "Count: " (count stage)))))
         "clear"
-        (map prn (clear-all-entries xtdb-node))
+        (map prn (clear-all-stage xtdb-node))
         (prn "list|load|clear")))))
 
 (comment
@@ -104,9 +104,9 @@
 
   (stop-xtdb! xtdb-node)
 
-  (clear-all-entries xtdb-node)
+  (clear-all-stage xtdb-node)
 
-  (get-all-entries xtdb-node)
+  (get-all-stage xtdb-node)
 
   (-main "load")
 
@@ -117,6 +117,6 @@
   (-main)
 
   (with-open [node (start-xtdb! "data")]
-    (doall (get-all-entries node)))
+    (doall (get-all-stage node)))
 
   .)
