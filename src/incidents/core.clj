@@ -1,8 +1,10 @@
 (ns incidents.core
+  (:gen-class)
   (:require [feedparser-clj.core :as feed]
             [clojure.java.io :as io]
             [xtdb.api :as xt]
-            [java-time :as t]))
+            [java-time :as t]
+            [taoensso.timbre :as log]))
 
 (defn start-xtdb! [dir]
   (letfn [(kv-store [d]
@@ -13,9 +15,6 @@
      {:xtdb/tx-log (kv-store (io/file dir "tx-log"))
       :xtdb/document-store (kv-store (io/file dir "doc-store"))
       :xtdb/index-store (kv-store (io/file dir "index-store"))})))
-
-(defn stop-xtdb! [node]
-  (.close node))
 
 (defn add-stage-id [stage]
   (assoc stage :xt/id {:type :stage :uri (:uri stage)}))
@@ -90,23 +89,15 @@
     (with-open [xtdb-node (start-xtdb! "data")]
       (case action
         "load"
-        (load-stage xtdb-node)
+        (doall (map #(log/info %) (load-stage xtdb-node)))
         "list"
         (let [stage (get-all-stage xtdb-node)]
-          (map prn (conj stage (str "Count: " (count stage)))))
+          (doall (map #(log/info %) (conj stage (str "Count: " (count stage))))))
         "clear"
-        (map prn (clear-all-stage xtdb-node))
-        (prn "list|load|clear")))))
+        (doall (map #(log/info %) (clear-all-stage xtdb-node)))
+        (log/info "list|load|clear")))))
 
 (comment
-
-  (def xtdb-node (start-xtdb! "data"))
-
-  (stop-xtdb! xtdb-node)
-
-  (clear-all-stage xtdb-node)
-
-  (get-all-stage xtdb-node)
 
   (-main "load")
 
@@ -115,8 +106,5 @@
   (-main "clear")
 
   (-main)
-
-  (with-open [node (start-xtdb! "data")]
-    (doall (get-all-stage node)))
 
   .)
