@@ -186,10 +186,10 @@
         "list"
         (let [stage (get-all-stage xtdb-node)
               facts (get-all-active-facts xtdb-node)]
-          (pp/pprint stage)
-          (println (str "Count of Stage: " (count stage)))
-          (pp/pprint facts)
-          (println (str "Count of Facts: " (count facts))))
+          (doall (map #(log/info %) stage))
+          (log/info "Count of Stage:" (count stage))
+          (doall (map #(log/info %) facts))
+          (log/info "Count of Facts:" (count facts)))
         "clear"
         (doall (map #(log/info %) (clear-all-stage! xtdb-node)))
         (log/info "list|load|clear")))))
