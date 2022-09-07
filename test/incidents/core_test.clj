@@ -43,3 +43,6 @@
            :uri "021cb6cb-b2bc-405a-86d9-73376696bc14"
            :type :stage
            })))))
+
+(t/deftest test-tag
+  (t/is (= {:thing :value :type :stage} (tag :stage {:thing :value}))))
