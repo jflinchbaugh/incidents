@@ -46,3 +46,8 @@
 
 (t/deftest test-tag
   (t/is (= {:thing :value :type :stage} (tag :stage {:thing :value}))))
+
+(t/deftest test-add-stage-id
+  (t/is (=
+          {:thing :value :uri "uri" :xt/id {:type :stage :uri "uri"}}
+          (add-stage-id {:thing :value :uri "uri"}))))
