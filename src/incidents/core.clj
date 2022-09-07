@@ -95,11 +95,7 @@
             ", Updated "
             (count updates)
             ", Removed "
-            (count ids-to-remove)))
-        _ (pp/pprint
-            {:new (first new-stage)
-             :existing (first existing-stage)
-             :comp (= (first new-stage) (first existing-stage))})]
+            (count ids-to-remove)))]
     (->>
      updates
      (map (partial put-stage! node))
