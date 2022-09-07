@@ -142,12 +142,14 @@
 
 (defn get-all-facts [node]
   (->>
-    (xt/q (xt/db node) '{:find [(pull ?e [*])]
-                         :where [[?e :type :fact]]})
-    (mapv first)))
+   (xt/q (xt/db node) '{:find [(pull ?e [*])]
+                        :where [[?e :type :fact]]})
+   (mapv first)))
 
 (defn end [date fact]
-  (assoc fact :end-date date))
+  (assoc fact
+         :end-date date
+         :duration-minutes (t/as (t/duration (:start-date fact) date) :minutes)))
 
 (defn transform-facts! [node]
   (let [active-facts (get-all-active-facts node)
@@ -161,16 +163,15 @@
         ended-facts (remove (set new-facts) active-facts)]
 
     (concat
-      (->>
-        ended-facts
-        (map (partial end (java.util.Date.)))
-        (map (partial put-fact! node))
-        doall)
-      (->>
-        updated-facts
-        (map (partial put-fact! node))
-        doall)
-      )))
+     (->>
+      ended-facts
+      (map (partial end (java.util.Date.)))
+      (map (partial put-fact! node))
+      doall)
+     (->>
+      updated-facts
+      (map (partial put-fact! node))
+      doall))))
 
 (defn -main [& args]
   (let [[action & args] args]
@@ -178,11 +179,9 @@
       (case action
         "load"
         (doall
-          (map
-            #(log/info %)
-            (concat
-              (load-stage! xtdb-node)
-              (transform-facts! xtdb-node))))
+         (concat
+          (load-stage! xtdb-node)
+          (transform-facts! xtdb-node)))
         "list"
         (let [stage (get-all-stage xtdb-node)
               facts (get-all-active-facts xtdb-node)]
@@ -190,9 +189,16 @@
           (log/info "Count of Stage:" (count stage))
           (doall (map #(log/info %) facts))
           (log/info "Count of Facts:" (count facts)))
+        "list-all"
+        (let [stage (get-all-stage xtdb-node)
+              facts (get-all-facts xtdb-node)]
+          (doall (map #(log/info %) stage))
+          (log/info "Count of Stage:" (count stage))
+          (doall (map #(log/info %) facts))
+          (log/info "Count of Facts:" (count facts)))
         "clear"
         (doall (map #(log/info %) (clear-all-stage! xtdb-node)))
-        (log/info "list|load|clear")))))
+        (log/info "list|list-all|load|clear")))))
 
 (comment
 
@@ -212,33 +218,10 @@
 
   (-main "list")
 
+  (-main "list-all")
+
   (-main "clear")
 
   (-main)
-
-  (java.util.Date.)
-
-
-  (=
-    {:description
-     {:type "text/html",
-      :value "RAPHO TOWNSHIP;  LEBANON RD & SHEARERS CREEK; "},
-     :link "http://www.lcwc911.us/lcwc/lcwc/publiccad.asp",
-     :published-date #inst "2022-09-07T05:35:36.000-00:00",
-     :title "VEHICLE ACCIDENT-NO INJURIES",
-     :uri "1a2ae9e1-fc96-4408-befc-b7eea4fdd785",
-     :type :stage,
-     :xt/id {:uri "1a2ae9e1-fc96-4408-befc-b7eea4fdd785", :type :stage}}
-    {:description
-     {:type "text/html",
-      :value "RAPHO TOWNSHIP;  LEBANON RD & SHEARERS CREEK; "},
-     :link "http://www.lcwc911.us/lcwc/lcwc/publiccad.asp",
-     :published-date #inst "2022-09-07T05:35:36.000-00:00",
-     :title "VEHICLE ACCIDENT-NO INJURIES",
-     :uri "1a2ae9e1-fc96-4408-befc-b7eea4fdd785",
-     :type :stage,
-     :xt/id {:uri "1a2ae9e1-fc96-4408-befc-b7eea4fdd785", :type :stage}})
-
-  (remove (set [1 2 3]) [3 4 5])
 
   .)
