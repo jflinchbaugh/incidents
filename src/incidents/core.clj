@@ -5,7 +5,8 @@
             [xtdb.api :as xt]
             [clojure.pprint :as pp]
             [java-time :as t]
-            [taoensso.timbre :as log]))
+            [taoensso.timbre :as log]
+            [clojure.string :as str]))
 
 (log/merge-config! {:ns-filter #{"incidents.*"}})
 
@@ -37,7 +38,7 @@
               (coll? v))
              (empty? v)))) rec)))
 
-(defn put-stage [node stage]
+(defn put-stage! [node stage]
   (xt/await-tx
    node
    (xt/submit-tx
@@ -58,57 +59,147 @@
       :where [[e :type :stage]]})
    (map first)))
 
-(defn clear-all-stage [node]
+(defn clear-all-stage! [node]
   (->>
    (get-all-stage-ids node)
    (mapv (fn [i] [::xt/evict i]))
    (xt/submit-tx node)
    (xt/await-tx node)))
 
-(defn delete-stage [node ids]
+(defn delete-stage! [node ids]
   (->>
    ids
    (mapv (fn [i] [::xt/delete i]))
    (xt/submit-tx node)
    (xt/await-tx node)))
 
-(defn load-stage [node]
+(defn load-stage! [node]
   (let [new-stage (->>
-                     "https://webcad.lcwc911.us/Pages/Public/LiveIncidentsFeed.aspx"
-                     feed/parse-feed
-                     :entries
-                     (map add-stage-id))
+                   "https://webcad.lcwc911.us/Pages/Public/LiveIncidentsFeed.aspx"
+                   feed/parse-feed
+                   :entries
+                   (map add-stage-id))
         new-stage-ids (set (map :xt/id new-stage))
         existing-stage-ids (get-all-stage-ids node)
         ids-to-remove (remove new-stage-ids existing-stage-ids)
-        removals (delete-stage node ids-to-remove)
+        removals (delete-stage! node ids-to-remove)
         _ (log/info
-            (str
-              "Updated "
-              (count new-stage)
-              " and Removed "
-              (count ids-to-remove)))]
+           (str
+            "Updated "
+            (count new-stage)
+            " and Removed "
+            (count ids-to-remove)))]
     (->>
      new-stage
-     (map (partial put-stage node))
+     (map (partial put-stage! node))
      doall)))
+
+(defn- title-case [s]
+  (str/join " " (map str/capitalize (str/split s #" "))))
+
+(defn- parse-units [s]
+  (if (nil? s) []
+      (map (comp title-case str/trim) (str/split s #"<br>"))))
+
+(defn- parse-streets [s]
+  (if (nil? s) []
+      (map (comp title-case str/trim) (str/split s #"[&/]"))))
+
+(defn parse [in]
+  (let [[municipality streets units] (str/split
+                                      (get-in in [:description :value])
+                                      #"; *")]
+    {:uri (:uri in)
+     :start-date (:published-date in)
+     :title (title-case (:title in))
+     :municipality (title-case (str/trim municipality))
+     :streets (parse-streets streets)
+     :units (parse-units units)}))
+
+(defn add-fact-id [fact]
+  (assoc fact :xt/id (tag :fact {:uri (:uri fact)})))
+
+(defn put-fact! [node fact]
+  (xt/await-tx
+   node
+   (xt/submit-tx
+    node
+    [[::xt/put fact]])))
+
+(defn get-all-active-facts [node]
+  (->>
+   (xt/q (xt/db node) '{:find [(pull ?e [*])]
+                        :where [[?e :type :fact]
+                                (not [?e :end-date])]})
+   (mapv first)))
+
+(defn get-all-facts [node]
+  (->>
+    (xt/q (xt/db node) '{:find [(pull ?e [*])]
+                         :where [[?e :type :fact]]})
+    (mapv first)))
+
+(defn end [date fact]
+  (assoc fact :end-date date))
+
+(defn transform-facts! [node]
+  (let [active-facts (get-all-active-facts node)
+        new-facts (->>
+                   node
+                   get-all-stage
+                   (map parse)
+                   (map (partial tag :fact))
+                   (map add-fact-id))
+        updated-facts (remove (set active-facts) new-facts)
+        ended-facts (remove (set new-facts) active-facts)]
+
+    (concat
+      (->>
+        ended-facts
+        (map (partial end (java.util.Date.)))
+        (map (partial put-fact! node))
+        doall)
+      (->>
+        updated-facts
+        (map (partial put-fact! node))
+        doall)
+      )))
 
 (defn -main [& args]
   (let [[action & args] args]
     (with-open [xtdb-node (start-xtdb! "data")]
       (case action
         "load"
-        (doall (map #(log/info %) (load-stage xtdb-node)))
+        (doall
+          (map
+            #(log/info %)
+            (concat
+              (load-stage! xtdb-node)
+              (transform-facts! xtdb-node))))
         "list"
-        (let [stage (get-all-stage xtdb-node)]
+        (let [stage (get-all-stage xtdb-node)
+              facts (get-all-active-facts xtdb-node)]
           (pp/pprint stage)
-          (println (str "Count: " (count stage))))
+          (println (str "Count of Stage: " (count stage)))
+          (pp/pprint facts)
+          (println (str "Count of Facts: " (count facts))))
         "clear"
-        (doall (map #(log/info %) (clear-all-stage xtdb-node)))
+        (doall (map #(log/info %) (clear-all-stage! xtdb-node)))
         (log/info "list|load|clear")))))
 
-
 (comment
+
+  (with-open [xtdb-node (start-xtdb! "data")]
+    (transform-facts! xtdb-node))
+
+  (with-open [xtdb-node (start-xtdb! "data")]
+    (get-all-active-facts xtdb-node))
+
+  (with-open [xtdb-node (start-xtdb! "data")]
+    (get-all-facts xtdb-node))
+
+  (with-open [xtdb-node (start-xtdb! "data")]
+    (load-stage! xtdb-node))
 
   (-main "load")
 
@@ -117,5 +208,7 @@
   (-main "clear")
 
   (-main)
+
+  (java.util.Date.)
 
   .)
