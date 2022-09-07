@@ -43,7 +43,7 @@
    node
    (xt/submit-tx
     node
-    [[::xt/put (->> stage prune (tag :stage) add-stage-id)]])))
+    [[::xt/put stage]])))
 
 (defn get-all-stage [node]
   (->>
@@ -78,19 +78,30 @@
                    "https://webcad.lcwc911.us/Pages/Public/LiveIncidentsFeed.aspx"
                    feed/parse-feed
                    :entries
-                   (map add-stage-id))
+                   (map prune)
+                   (map (partial tag :stage))
+                   (map add-stage-id)
+                   (sort-by :uri))
         new-stage-ids (set (map :xt/id new-stage))
-        existing-stage-ids (get-all-stage-ids node)
+        existing-stage (sort-by :uri (get-all-stage node))
+        existing-stage-ids (map :xt/id existing-stage)
         ids-to-remove (remove new-stage-ids existing-stage-ids)
         removals (delete-stage! node ids-to-remove)
+        updates (remove (set existing-stage) new-stage)
         _ (log/info
            (str
-            "Updated "
+            "Found "
             (count new-stage)
-            " and Removed "
-            (count ids-to-remove)))]
+            ", Updated "
+            (count updates)
+            ", Removed "
+            (count ids-to-remove)))
+        _ (pp/pprint
+            {:new (first new-stage)
+             :existing (first existing-stage)
+             :comp (= (first new-stage) (first existing-stage))})]
     (->>
-     new-stage
+     updates
      (map (partial put-stage! node))
      doall)))
 
@@ -210,5 +221,28 @@
   (-main)
 
   (java.util.Date.)
+
+
+  (=
+    {:description
+     {:type "text/html",
+      :value "RAPHO TOWNSHIP;  LEBANON RD & SHEARERS CREEK; "},
+     :link "http://www.lcwc911.us/lcwc/lcwc/publiccad.asp",
+     :published-date #inst "2022-09-07T05:35:36.000-00:00",
+     :title "VEHICLE ACCIDENT-NO INJURIES",
+     :uri "1a2ae9e1-fc96-4408-befc-b7eea4fdd785",
+     :type :stage,
+     :xt/id {:uri "1a2ae9e1-fc96-4408-befc-b7eea4fdd785", :type :stage}}
+    {:description
+     {:type "text/html",
+      :value "RAPHO TOWNSHIP;  LEBANON RD & SHEARERS CREEK; "},
+     :link "http://www.lcwc911.us/lcwc/lcwc/publiccad.asp",
+     :published-date #inst "2022-09-07T05:35:36.000-00:00",
+     :title "VEHICLE ACCIDENT-NO INJURIES",
+     :uri "1a2ae9e1-fc96-4408-befc-b7eea4fdd785",
+     :type :stage,
+     :xt/id {:uri "1a2ae9e1-fc96-4408-befc-b7eea4fdd785", :type :stage}})
+
+  (remove (set [1 2 3]) [3 4 5])
 
   .)
