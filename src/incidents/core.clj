@@ -165,7 +165,7 @@
     (concat
      (->>
       ended-facts
-      (map (partial end (java.util.Date.)))
+      (map (partial end (t/java-date)))
       (map (partial put-fact! node))
       doall)
      (->>
