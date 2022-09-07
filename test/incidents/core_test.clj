@@ -51,3 +51,8 @@
   (t/is (=
           {:thing :value :uri "uri" :xt/id {:type :stage :uri "uri"}}
           (add-stage-id {:thing :value :uri "uri"}))))
+
+(t/deftest test-add-fact-id
+  (t/is (=
+          {:thing :value :uri "uri" :xt/id {:type :fact :uri "uri"}}
+          (add-fact-id {:thing :value :uri "uri"}))))
