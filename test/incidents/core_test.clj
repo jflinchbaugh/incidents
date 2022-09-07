@@ -56,3 +56,17 @@
   (t/is (=
           {:thing :value :uri "uri" :xt/id {:type :fact :uri "uri"}}
           (add-fact-id {:thing :value :uri "uri"}))))
+
+(t/deftest test-prune
+  (t/is (=
+          {:thing :value
+           :uri "uri"
+           :xt/id {:type :fact :uri "uri" :empty ""}}
+          (prune
+            {:thing :value
+             :uri "uri"
+             :xt/id {:type :fact :uri "uri" :empty ""}
+             :empty-str ""
+             :empty-list []
+             :empty-map {}
+             :nil-field nil}))))
