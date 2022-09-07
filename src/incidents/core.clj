@@ -105,11 +105,11 @@
   (str/join " " (map str/capitalize (str/split s #" "))))
 
 (defn- parse-units [s]
-  (if (nil? s) []
+  (if (nil? s) '()
       (map (comp title-case str/trim) (str/split s #"<br>"))))
 
 (defn- parse-streets [s]
-  (if (nil? s) []
+  (if (nil? s) '()
       (map (comp title-case str/trim) (str/split s #"[&/]"))))
 
 (defn parse [in]
