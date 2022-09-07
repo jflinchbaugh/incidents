@@ -2,10 +2,6 @@
   (:require [incidents.core :refer :all]
             [clojure.test :as t]))
 
-(t/deftest my-test
-  (t/testing "test"
-    (t/is (= 1 1))))
-
 (t/deftest test-parse
   (t/testing "parse null values"
     (t/is
