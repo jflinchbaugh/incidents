@@ -1,6 +1,7 @@
 (ns incidents.core-test
   (:require [incidents.core :refer :all]
-            [clojure.test :as t]))
+            [clojure.test :as t]
+            [java-time :as jt]))
 
 (t/deftest test-parse
   (t/testing "parse null values"
@@ -70,3 +71,13 @@
              :empty-list []
              :empty-map {}
              :nil-field nil}))))
+
+(t/deftest test-end
+  (let [now (jt/local-date-time)
+        start-time (jt/minus now (jt/minutes 10))]
+    (t/is (=
+            {:key :val
+             :start-date start-time
+             :end-date now
+             :duration-minutes 10}
+            (end now {:key :val :start-date start-time})))))
