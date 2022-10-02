@@ -4,7 +4,7 @@
             [clojure.java.io :as io]
             [xtdb.api :as xt]
             [clojure.pprint :as pp]
-            [java-time :as t]
+            [java-time.api :as t]
             [taoensso.timbre :as log]
             [clojure.string :as str]))
 
