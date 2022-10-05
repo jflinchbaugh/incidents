@@ -16,3 +16,9 @@ $ clojure -M -m incident.core load
 ```bash
 $ clojure -M -m incident.core list
 ```
+
+## Unit Testing
+
+```bash
+$ clojure -M:test/run
+```
