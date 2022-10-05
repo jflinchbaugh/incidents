@@ -7,6 +7,7 @@
   com.xtdb/xtdb-rocksdb {:mvn/version "1.22.0"}
   com.taoensso/timbre {:mvn/version "5.2.1"}
   com.fzakaria/slf4j-timbre {:mvn/version "0.3.21"}
+  com.magnars/test-with-files {:mvn/version "2021-02-17"}
  }
 
  :paths ["src" "test"]

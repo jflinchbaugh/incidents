@@ -3,7 +3,8 @@
             [clojure.test :as t]
             [java-time :as jt]
             [xtdb.api :as xt]
-            [clojure.java.io :as io]))
+            [clojure.java.io :as io]
+            [test-with-files.tools :refer [with-tmp-dir]]))
 
 (t/deftest test-parse
   (t/testing "parse null values"
@@ -80,14 +81,8 @@
             :duration-minutes 10}
            (end now {:key :val :start-date start-time})))))
 
-(defn create-temp-dir [prefix]
-  (.toFile
-   (java.nio.file.Files/createTempDirectory
-    prefix
-    (into-array java.nio.file.attribute.FileAttribute []))))
-
 (t/deftest test-start-xtdb!
-  (let [tempdir (create-temp-dir "xtdb-")]
+  (with-tmp-dir tempdir
     (with-open [node (start-xtdb! tempdir)]
       (t/is node))))
 
