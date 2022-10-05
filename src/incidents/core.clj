@@ -73,9 +73,9 @@
    (xt/submit-tx node)
    (xt/await-tx node)))
 
-(defn load-stage! [node]
+(defn load-stage! [node source]
   (let [new-stage (->>
-                   "https://webcad.lcwc911.us/Pages/Public/LiveIncidentsFeed.aspx"
+                   source
                    feed/parse-feed
                    :entries
                    (map prune)
@@ -162,16 +162,15 @@
         updated-facts (remove (set active-facts) new-facts)
         ended-facts (remove (set new-facts) active-facts)]
 
-    (concat
-     (->>
-      ended-facts
-      (map (partial end (t/java-date)))
-      (map (partial put-fact! node))
-      doall)
-     (->>
-      updated-facts
-      (map (partial put-fact! node))
-      doall))))
+    (doall
+      (concat
+        (->>
+          ended-facts
+          (map (partial end (t/java-date)))
+          (map (partial put-fact! node)))
+        (->>
+          updated-facts
+          (map (partial put-fact! node)))))))
 
 (defn -main [& args]
   (let [[action & args] args]
@@ -180,7 +179,9 @@
         "load"
         (doall
          (concat
-          (load-stage! xtdb-node)
+           (load-stage!
+             xtdb-node
+             "https://webcad.lcwc911.us/Pages/Public/LiveIncidentsFeed.aspx")
           (transform-facts! xtdb-node)))
         "list"
         (let [stage (get-all-stage xtdb-node)
@@ -212,7 +213,9 @@
     (get-all-facts xtdb-node))
 
   (with-open [xtdb-node (start-xtdb! "data")]
-    (load-stage! xtdb-node))
+    (load-stage!
+      xtdb-node
+      "https://webcad.lcwc911.us/Pages/Public/LiveIncidentsFeed.aspx"))
 
   (-main "load")
 
@@ -223,5 +226,18 @@
   (-main "clear")
 
   (-main)
+
+  (with-open [node (start-xtdb! "data")]
+    (->>
+      (xt/q (xt/db node) '{:find [?description]
+                           :where [[?e :type :fact]
+                                   [?e :description ?description]]})
+      (mapv first)
+      (take 10)))
+
+  (with-open [node (start-xtdb! "data")]
+    (->>
+      (xt/attribute-stats node)
+      ))
 
   .)

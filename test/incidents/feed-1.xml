@@ -1,0 +1,29 @@
+<rss version="2.0">
+    <channel>
+        <title>Lancaster County Live Incidents</title>
+        <link>https://webcad.lcwc911.us/Pages/Public/LiveIncidentsFeed.aspx</link>
+        <description>Active incidents from Lancaster County-Wide Communications.</description>
+        <ttl>5</ttl>
+        <item>
+            <title>VEHICLE ACCIDENT-ENTRAPMENT</title>
+            <link>http://www.lcwc911.us/lcwc/lcwc/publiccad.asp</link>
+            <description>MANHEIM TOWNSHIP; ROUTE 30 W &amp; RT 222 OVERPASS; TRUCK 204; </description>
+            <pubDate>Sun, 11 Sep 2022 17:38:34 GMT</pubDate>
+            <guid isPermaLink="false">4b3de6cc-dc25-47a7-a86e-d985e6a36289</guid>
+        </item>
+        <item>
+            <title>STANDBY-PREARRANGED EMS</title>
+            <link>http://www.lcwc911.us/lcwc/lcwc/publiccad.asp</link>
+            <description>EAST HEMPFIELD TOWNSHIP; COMMUNITY WAY &amp; GOOD DR; SQUAD 06-2; </description>
+            <pubDate>Sun, 11 Sep 2022 17:51:13 GMT</pubDate>
+            <guid isPermaLink="false">d460839e-6ce3-4ce3-8ca8-8f06dc88936c</guid>
+        </item>
+        <item>
+          <title>MEDICAL EMERGENCY</title>
+          <link>http://www.lcwc911.us/lcwc/lcwc/publiccad.asp</link>
+          <description>LANCASTER TOWNSHIP; ABBEYVILLE RD &amp; ALLEY R; AMB 56-12; </description>
+          <pubDate>Sun, 11 Sep 2022 17:48:51 GMT</pubDate>
+          <guid isPermaLink="false">ab1b10cc-70ab-43df-8b02-88ace5412546</guid>
+        </item>
+    </channel>
+</rss>
