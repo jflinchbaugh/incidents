@@ -186,16 +186,16 @@
         "list"
         (let [stage (get-all-stage xtdb-node)
               facts (get-all-active-facts xtdb-node)]
-          (doall (map #(log/info %) stage))
+          (doall (map prn stage))
           (log/info "Count of Stage:" (count stage))
-          (doall (map #(log/info %) facts))
+          (doall (map prn facts))
           (log/info "Count of Facts:" (count facts)))
         "list-all"
         (let [stage (get-all-stage xtdb-node)
               facts (get-all-facts xtdb-node)]
-          (doall (map #(log/info %) stage))
+          (doall (map prn stage))
           (log/info "Count of Stage:" (count stage))
-          (doall (map #(log/info %) facts))
+          (doall (map prn facts))
           (log/info "Count of Facts:" (count facts)))
         "clear"
         (doall (map #(log/info %) (clear-all-stage! xtdb-node)))

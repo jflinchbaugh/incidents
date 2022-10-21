@@ -1,10 +1,12 @@
 (ns incidents.core-test
   (:require [incidents.core :refer :all]
             [clojure.test :as t]
+            [feedparser-clj.core :as feed]
             [java-time :as jt]
             [xtdb.api :as xt]
             [clojure.java.io :as io]
-            [test-with-files.tools :refer [with-tmp-dir]]))
+            [test-with-files.tools :refer [with-tmp-dir]]
+            [clojure.string :as str]))
 
 (t/deftest test-parse
   (t/testing "parse null values"
@@ -91,25 +93,43 @@
     (t/is node "the node is open")
     (t/is (empty? (get-all-stage node)) "staging starts empty")
 
+    (prn (-> "incidents/feed-1.xml" io/resource str))
+
     (load-stage! node (str (io/resource "incidents/feed-1.xml")))
     (t/is (= 3 (count (get-all-stage node))) "staging has data")
 
-    (t/is (empty? (get-all-facts node)) "facts start empty")
+    #_(t/is (empty? (get-all-facts node)) "facts start empty")
 
-    (transform-facts! node)
-    (t/is (= 3 (count (get-all-facts node))) "facts are loaded from staging")
+    #_(transform-facts! node)
+    #_(t/is (= 3 (count (get-all-facts node))) "facts are loaded from staging")
 
-    (load-stage! node (str (io/resource "incidents/feed-2.xml")))
-    (t/is (= 3 (count (get-all-stage node))) "staging has data")
+    #_(load-stage! node (str (io/resource "incidents/feed-2.xml")))
+    #_(t/is (= 3 (count (get-all-stage node))) "staging has data")
 
-    (transform-facts! node)
-    (t/is (= 4 (count (get-all-facts node))) "facts are loaded from staging")
+    #_(transform-facts! node)
+    #_(t/is (= 4 (count (get-all-facts node))) "facts are loaded from staging")
 
-    (t/is (clear-all-stage! node) "evict all of staging")
-    (t/is (empty? (get-all-stage node)) "staging is again empty")
+    #_(t/is (clear-all-stage! node) "evict all of staging")
+    #_(t/is (empty? (get-all-stage node)) "staging is again empty")
 
-    (t/is (= 4 (count (get-all-facts node))) "facts are still there")
+    #_(t/is (= 4 (count (get-all-facts node))) "facts are still there")
     ))
+
+(t/deftest test-xtdb
+  (with-open [node (xt/start-node {})]
+    (t/is node "node is open")
+    (t/is (put-stage! node (tag :stage (add-stage-id {:uri 1 :thing :other}))))
+    (t/is (get-all-stage node))))
+
+(t/deftest test-feed
+  (let [source (->>
+                    "incidents/feed-1.xml"
+                    (io/resource)
+                    str)
+        content (->> source feed/parse-feed)]
+    (t/is (str/includes? source "file:/"))
+    (t/is (str/includes? source "feed-1.xml"))
+    (t/is (= 3 (count (:entries content))))))
 
 (comment
 
