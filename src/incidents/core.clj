@@ -6,7 +6,10 @@
             [clojure.pprint :as pp]
             [java-time.api :as t]
             [taoensso.timbre :as log]
-            [clojure.string :as str]))
+            [clojure.string :as str]
+            [hiccup.core :as h]
+            [hiccup.page :as p]
+            [hiccup.element :as e]))
 
 (log/merge-config! {:ns-filter #{"incidents.*"}})
 
@@ -172,6 +175,43 @@
           updated-facts
           (map (partial put-fact! node)))))))
 
+(defn format-date [d]
+  (t/format "yyyy-MM-dd HH:mm"(t/local-date-time d (t/zone-id))))
+
+(defn report-entry [f]
+  [:li
+   [:div.municipality (:municipality f)]
+   [:div.streets (str/join " & " (:streets f))]
+   [:div.start-date (format-date (:start-date f))]
+   [:div.title (:title f)]
+   [:div.units (str/join ", " (:units f))]]
+  )
+
+(comment
+  {:uri "63d885a1-8b82-44ec-a7be-e159e8e34846",
+   :start-date #inst "2022-11-10T18:37:25.000-00:00",
+   :title "Routine Transfer-class 3",
+   :municipality "West Hempfield Township",
+   :streets ("Marietta Ave" "Westover Dr"),
+   :units ("Amb 77-2"),
+   :type :fact,
+   :xt/id {:uri "63d885a1-8b82-44ec-a7be-e159e8e34846", :type :fact}}
+  )
+
+(defn report-active [facts output-dir]
+  (let [title "Active Incidents"]
+    (spit (str output-dir "/index.html")
+      (str
+        (p/html5 {:lang "en"}
+          [:head
+           [:title title]
+           (p/include-css "style.css")]
+          [:body
+           [:h1 title]
+           [:ul
+            (map report-entry (reverse (sort-by :start-date facts)))
+            ]])))))
+
 (defn -main [& args]
   (let [[action & args] args]
     (with-open [xtdb-node (start-xtdb! "data")]
@@ -183,12 +223,12 @@
              xtdb-node
              "https://webcad.lcwc911.us/Pages/Public/LiveIncidentsFeed.aspx")
           (transform-facts! xtdb-node)))
-        "list"
+        "list-active"
         (let [stage (get-all-stage xtdb-node)
               facts (get-all-active-facts xtdb-node)]
           (->> stage (map pp/pprint) doall)
           (log/info "Count of Stage:" (count stage))
-          (->> stage (map pp/pprint) doall)
+          (->> facts (map pp/pprint) doall)
           (log/info "Count of Facts:" (count facts)))
         "list-all"
         (let [stage (get-all-stage xtdb-node)
@@ -197,9 +237,26 @@
           (log/info "Count of Stage:" (count stage))
           (doall (map prn facts))
           (log/info "Count of Facts:" (count facts)))
+        "report-active"
+        (if (nil? (first args))
+          (log/info "report-active <output-dir>")
+          (let [facts (get-all-active-facts xtdb-node)]
+            (report-active facts (first args))))
+        "load-and-report"
+        (if (nil? (first args))
+          (log/info "report-active <output-dir>")
+          (do 
+            (doall
+              (concat
+                (load-stage!
+                  xtdb-node
+                  "https://webcad.lcwc911.us/Pages/Public/LiveIncidentsFeed.aspx")
+                (transform-facts! xtdb-node)))
+            (let [facts (get-all-active-facts xtdb-node)]
+              (report-active facts (first args)))))
         "clear"
         (doall (map #(log/info %) (clear-all-stage! xtdb-node)))
-        (log/info "list|list-all|load|clear")))))
+        (log/info "list-active|list-all|report-active|load|clear")))))
 
 (comment
 
