@@ -9,7 +9,8 @@
             [clojure.string :as str]
             [hiccup.core :as h]
             [hiccup.page :as p]
-            [hiccup.element :as e]))
+            [hiccup.element :as e]
+            [hiccup.util :as u]))
 
 (log/merge-config! {:ns-filter #{"incidents.*"}})
 
@@ -115,14 +116,20 @@
   (if (nil? s) '()
       (map (comp title-case str/trim) (str/split s #"[&/]"))))
 
+(defn- format-title [title]
+  (title-case (str/replace title #"-" " - ")))
+
+(defn- format-municipality [name]
+  (str/trim (title-case name)))
+
 (defn parse [in]
   (let [[municipality streets units] (str/split
                                       (get-in in [:description :value])
                                       #"; *")]
     {:uri (:uri in)
      :start-date (:published-date in)
-     :title (title-case (:title in))
-     :municipality (title-case (str/trim municipality))
+     :title (format-title (:title in))
+     :municipality (format-municipality municipality)
      :streets (parse-streets streets)
      :units (parse-units units)}))
 
@@ -178,10 +185,27 @@
 (defn format-date [d]
   (t/format "yyyy-MM-dd HH:mm"(t/local-date-time d (t/zone-id))))
 
+(defn- format-streets [streets]
+  (str/join " & " streets))
+
+(defn- format-map-location [fact]
+  (let [municipality (:municipality fact)
+        streets (:streets fact)]
+    (str/join
+      " "
+      [(format-streets streets)
+       (str/replace municipality #" Township| City| Borough" "")
+       "PA"])))
+
 (defn report-entry [f]
   [:li
+   [:div.streets
+     (e/link-to
+       {:target "_blank"}
+       (u/url "https://www.google.com/maps/search/"
+         {:api 1 :query (format-map-location f)})
+       (format-streets (:streets f)))]
    [:div.municipality (:municipality f)]
-   [:div.streets (str/join " & " (:streets f))]
    [:div.start-date (format-date (:start-date f))]
    [:div.title (:title f)]
    [:div.units (str/join ", " (:units f))]]
