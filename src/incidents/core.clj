@@ -105,8 +105,18 @@
      (map (partial put-stage! node))
      doall)))
 
+(defn- override [s]
+  (get
+    {"Ems" "EMS"
+     "Qrs" "QRS"
+     "Amb" "Ambulance"
+     "Tac" "TAC"
+     "Int" "INT"}
+    s
+    s))
+
 (defn- title-case [s]
-  (str/join " " (map str/capitalize (str/split s #" "))))
+  (str/join " " (map (comp override str/capitalize) (str/split s #" "))))
 
 (defn- parse-units [s]
   (if (nil? s) '()
