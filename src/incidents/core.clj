@@ -133,9 +133,12 @@
   (str/trim (title-case name)))
 
 (defn parse [in]
-  (let [[municipality streets units] (str/split
-                                      (get-in in [:description :value])
-                                      #"; *")]
+  (let [parts (str/split (get-in in [:description :value]) #"; *")
+        [municipality streets units] parts
+        [streets units] (if
+                            (re-matches #".*COUNTY$" municipality)
+                          [nil streets]
+                          [streets units])]
     {:uri (:uri in)
      :start-date (:published-date in)
      :title (format-title (:title in))
