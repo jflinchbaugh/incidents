@@ -5,7 +5,7 @@
   clojure.java-time/clojure.java-time {:mvn/version "1.1.0"}
   com.xtdb/xtdb-core {:mvn/version "1.22.1"}
   com.xtdb/xtdb-rocksdb {:mvn/version "1.22.1"}
-  com.taoensso/timbre {:mvn/version "5.2.1"}
+  com.taoensso/timbre {:mvn/version "6.0.1"}
   com.fzakaria/slf4j-timbre {:mvn/version "0.3.21"}
   com.magnars/test-with-files {:mvn/version "2021-02-17"}
   hiccup/hiccup {:mvn/version "1.0.5"}
