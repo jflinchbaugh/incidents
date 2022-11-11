@@ -115,8 +115,14 @@
     s
     s))
 
+(defn- mc-fix [s]
+  (str/replace
+    s
+    #"^Mc(.)"
+    (fn [[_ letter]] (str "Mc" (str/upper-case letter)))))
+
 (defn- title-case [s]
-  (str/join " " (map (comp override str/capitalize) (str/split s #" "))))
+  (str/join " " (map (comp mc-fix override str/capitalize) (str/split s #" "))))
 
 (defn- parse-units [s]
   (if (nil? s) '()

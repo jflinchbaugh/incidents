@@ -33,13 +33,13 @@
          :start-date #inst "2022-08-11T03:42:39.000-00:00"
          :title "Medical Emergency"
          :municipality "Salisbury Township"
-         :streets ["Chestnut St" "Bridge St" "Another Rd"]
+         :streets ["Chestnut St" "McBridge St" "Anomcer Rd"]
          :units ["Med 293 Chester" "Ambulance 49-2"]}
         (parse
          {:description
           {:type "text/html"
            :value
-           "SALISBURY TOWNSHIP;  CHESTNUT ST & BRIDGE ST / ANOTHER RD; MED 293 CHESTER<br> AMB 49-2; "}
+           "SALISBURY TOWNSHIP;  CHESTNUT ST & MCBRIDGE ST / ANOMCER RD; MED 293 CHESTER<br> AMB 49-2; "}
           :link "http://www.lcwc911.us/lcwc/lcwc/publiccad.asp",
           :published-date #inst "2022-08-11T03:42:39.000-00:00"
           :title "MEDICAL EMERGENCY"
