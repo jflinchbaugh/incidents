@@ -34,7 +34,7 @@
          :title "Medical Emergency"
          :municipality "Salisbury Township"
          :streets ["Chestnut St" "Bridge St" "Another Rd"]
-         :units ["Med 293 Chester" "Amb 49-2"]}
+         :units ["Med 293 Chester" "Ambulance 49-2"]}
         (parse
          {:description
           {:type "text/html"
