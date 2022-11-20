@@ -1,3 +1,5 @@
 #!/bin/sh
 
-clj -M -m incidents.core load-and-report "$1"
+clj \
+    -J-server -J-XX:MaxRAMPercentage=20 -J-XX:MinRAMPercentage=20 \
+    -M -m incidents.core load-and-report "$1"
