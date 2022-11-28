@@ -49,6 +49,14 @@
     node
     [[::xt/put stage]])))
 
+(defn incident-type [fact]
+  (cond
+    (nil? fact) nil
+    (nil? (:title fact)) nil
+    (re-matches #".*(EMS|Medical|Transfer).*" (:title fact)) :medical
+    (re-matches #".*(Traffic|Vehicle).*" (:title fact)) :traffic
+    :else :fire))
+
 (defn get-all-stage [node]
   (->>
    (xt/q (xt/db node) '{:find [(pull e [*])]
@@ -149,6 +157,9 @@
 (defn- format-municipality [name]
   (str/trim (title-case name)))
 
+(defn add-incident-type [fact]
+  (assoc fact :incident-type (incident-type fact)))
+
 (defn parse [in]
   (let [parts (str/split (get-in in [:description :value]) #"; *")
         [municipality streets units] parts
@@ -156,22 +167,26 @@
                          (re-matches #".*COUNTY$" municipality)
                           [nil streets]
                           [streets units])]
-    {:uri (:uri in)
-     :start-date (:published-date in)
-     :title (format-title (:title in))
-     :municipality (format-municipality municipality)
-     :streets (parse-streets streets)
-     :units (parse-units units)}))
+    (->>
+      {:uri (:uri in)
+         :start-date (:published-date in)
+         :title (format-title (:title in))
+         :municipality (format-municipality municipality)
+         :streets (parse-streets streets)
+       :units (parse-units units)}
+      add-incident-type)))
 
 (defn cleanup [fact]
-  {:xt/id (:xt/id fact)
-   :uri (:uri fact)
-   :type (:type fact)
-   :start-date (:start-date fact)
-   :title (format-title (:title fact))
-   :municipality (format-municipality (:municipality fact))
-   :streets (map format-street (:streets fact))
-   :units (map format-unit (:units fact))})
+  (->>
+    {:xt/id (:xt/id fact)
+     :uri (:uri fact)
+     :type (:type fact)
+     :start-date (:start-date fact)
+     :title (format-title (:title fact))
+     :municipality (format-municipality (:municipality fact))
+     :streets (map format-street (:streets fact))
+     :units (map format-unit (:units fact))}
+    add-incident-type))
 
 (defn add-fact-id [fact]
   (assoc fact :xt/id (tag :fact {:uri (:uri fact)})))
@@ -376,6 +391,15 @@
   (with-open [node (start-xtdb! "data")]
     (->> node
          get-all-facts
-         (take-last 10)))
+         (map :title)
+         (group-by identity)
+         keys
+         sort))
+
+  (with-open [node (start-xtdb! "data")]
+    (->> node
+      get-all-facts
+      (take 10)
+      ))
 
   .)

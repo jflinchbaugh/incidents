@@ -14,6 +14,7 @@
      (= {:uri "021cb6cb-b2bc-405a-86d9-73376696bc14"
          :start-date #inst "2022-08-11T03:42:39.000-00:00"
          :title "Medical Emergency"
+         :incident-type :medical
          :municipality "Salisbury Township"
          :streets []
          :units []}
@@ -32,6 +33,7 @@
      (= {:uri "021cb6cb-b2bc-405a-86d9-73376696bc14"
          :start-date #inst "2022-08-11T03:42:39.000-00:00"
          :title "Medical Emergency"
+         :incident-type :medical
          :municipality "Salisbury Township"
          :streets ["Chestnut St" "McBridge St" "Anomcer Rd"]
          :units ["Med 293 Chester" "Ambulance 49-2"]}
@@ -130,6 +132,18 @@
     (t/is (str/includes? source "file:/"))
     (t/is (str/includes? source "feed-1.xml"))
     (t/is (= 3 (count (:entries content))))))
+
+(t/deftest test-incident-type
+  (t/is (nil? (incident-type nil)))
+  (t/is (nil? (incident-type {})))
+  (t/is (= :medical (incident-type {:title "Medical Emergency"})))
+  (t/is (= :medical (incident-type {:title "Something EMS"})))
+  (t/is (= :medical (incident-type {:title "Emergency Transfer"})))
+  (t/is (= :medical (incident-type {:title "Routine Transfer"})))
+  (t/is (= :traffic (incident-type {:title "Traffic Accident"})))
+  (t/is (= :traffic (incident-type {:title "Vehicle Fire"})))
+  (t/is (= :fire (incident-type {:title "Gas Leak"})))
+  )
 
 (comment
 
