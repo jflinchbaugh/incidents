@@ -1,0 +1,8 @@
+body {
+    font-family: 'Helvetica Neue', Verdana, Helvetica, Arial, sans-serif;
+    font-size: 16pt;
+    margin: 0 auto;
+    -webkit-font-smoothing: antialiased;
+    width: 100%;
+    background: white;
+}

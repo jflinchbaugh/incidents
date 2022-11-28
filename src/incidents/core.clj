@@ -255,6 +255,13 @@
             (map report-entry (reverse (sort-by :start-date facts)))
             ]])))))
 
+(defn copy-file! [src dest]
+  (io/copy (io/input-stream (io/resource src)) (io/file dest)))
+
+(defn copy-resources! [dest]
+  (copy-file! "web/htaccess" (str dest "/.htaccess"))
+  (copy-file! "web/style.css" (str dest "/style.css")))
+
 (defn -main [& args]
   (let [[action & args] args]
     (with-open [xtdb-node (start-xtdb! "data")]
@@ -283,20 +290,24 @@
         "report-active"
         (if (nil? (first args))
           (log/info "report-active <output-dir>")
-          (let [facts (get-all-active-facts xtdb-node)]
-            (report-active facts (first args))))
+          (let [facts (get-all-active-facts xtdb-node)
+                output-dir (first args)]
+            (report-active facts output-dir)
+            (copy-resources! output-dir)))
         "load-and-report"
         (if (nil? (first args))
           (log/info "report-active <output-dir>")
-          (do 
+          (do
             (doall
               (concat
                 (load-stage!
                   xtdb-node
                   "https://webcad.lcwc911.us/Pages/Public/LiveIncidentsFeed.aspx")
                 (transform-facts! xtdb-node)))
-            (let [facts (get-all-active-facts xtdb-node)]
-              (report-active facts (first args)))))
+            (let [facts (get-all-active-facts xtdb-node)
+                  output-dir (first args)]
+              (report-active facts output-dir)
+              (copy-resources! output-dir))))
         "clear"
         (doall (map #(log/info %) (clear-all-stage! xtdb-node)))
         (log/info "list-active|list-all|report-active|load|clear")))))
