@@ -303,7 +303,8 @@
         (->> xtdb-node
              get-all-facts
              (pmap (comp (partial put-fact! xtdb-node) cleanup))
-             doall)
+             doall
+             (#(log/info "Processed: " (count %))))
         "load"
         (doall
          (concat
@@ -348,7 +349,7 @@
               (copy-resources! output-dir))))
         "clear"
         (doall (map #(log/info %) (clear-all-stage! xtdb-node)))
-        (log/info "list-active|list-all|report-active|load|clear")))))
+        (log/info "cleanup|list-active|list-all|report-active|load|clear")))))
 
 (comment
 
