@@ -107,33 +107,44 @@
 
 (defn- override [s]
   (get
-    {"Ems" "EMS"
-     "Qrs" "QRS"
-     "Amb" "Ambulance"
-     "Tac" "TAC"
-     "Int" "INT"}
-    s
-    s))
+   {"Bls" "BLS"
+    "Ems" "EMS"
+    "Qrs" "QRS"
+    "Amb" "Ambulance"
+    "Tac" "TAC"
+    "Int" "INT"
+    "1a" "1A"
+    "2a" "2A"
+    "3a" "3A"
+    "Co" "CO"}
+   s
+   s))
 
 (defn- mc-fix [s]
   (str/replace
-    s
-    #"^Mc(.)"
-    (fn [[_ letter]] (str "Mc" (str/upper-case letter)))))
+   s
+   #"^Mc(.)"
+   (fn [[_ letter]] (str "Mc" (str/upper-case letter)))))
 
 (defn- title-case [s]
-  (str/join " " (map (comp mc-fix override str/capitalize) (str/split s #" "))))
+  (str/join (map (comp mc-fix override str/capitalize) (str/split s #"\b"))))
+
+(def format-unit (comp title-case str/trim))
+
+(def format-street (comp title-case str/trim))
 
 (defn- parse-units [s]
   (if (nil? s) '()
-      (map (comp title-case str/trim) (str/split s #"<br>"))))
+      (map format-unit (str/split s #"<br>"))))
 
 (defn- parse-streets [s]
   (if (nil? s) '()
-      (map (comp title-case str/trim) (str/split s #"[&/]"))))
+      (map format-street (str/split s #"[&/]"))))
 
 (defn- format-title [title]
-  (title-case (str/replace title #"-" " - ")))
+  (-> title
+      (str/replace #" +- +" "-")
+      title-case))
 
 (defn- format-municipality [name]
   (str/trim (title-case name)))
@@ -142,7 +153,7 @@
   (let [parts (str/split (get-in in [:description :value]) #"; *")
         [municipality streets units] parts
         [streets units] (if
-                            (re-matches #".*COUNTY$" municipality)
+                         (re-matches #".*COUNTY$" municipality)
                           [nil streets]
                           [streets units])]
     {:uri (:uri in)
@@ -151,6 +162,16 @@
      :municipality (format-municipality municipality)
      :streets (parse-streets streets)
      :units (parse-units units)}))
+
+(defn cleanup [fact]
+  {:xt/id (:xt/id fact)
+   :uri (:uri fact)
+   :type (:type fact)
+   :start-date (:start-date fact)
+   :title (format-title (:title fact))
+   :municipality (format-municipality (:municipality fact))
+   :streets (map format-street (:streets fact))
+   :units (map format-unit (:units fact))})
 
 (defn add-fact-id [fact]
   (assoc fact :xt/id (tag :fact {:uri (:uri fact)})))
@@ -192,17 +213,17 @@
         ended-facts (remove (set new-facts) active-facts)]
 
     (doall
-      (concat
-        (->>
-          ended-facts
-          (map (partial end (t/java-date)))
-          (map (partial put-fact! node)))
-        (->>
-          updated-facts
-          (map (partial put-fact! node)))))))
+     (concat
+      (->>
+       ended-facts
+       (map (partial end (t/java-date)))
+       (map (partial put-fact! node)))
+      (->>
+       updated-facts
+       (map (partial put-fact! node)))))))
 
 (defn format-date [d]
-  (t/format "yyyy-MM-dd HH:mm"(t/local-date-time d (t/zone-id))))
+  (t/format "yyyy-MM-dd HH:mm" (t/local-date-time d (t/zone-id))))
 
 (defn- format-streets [streets]
   (str/join " & " streets))
@@ -211,24 +232,23 @@
   (let [municipality (:municipality fact)
         streets (:streets fact)]
     (str/join
-      " "
-      [(format-streets streets)
-       (str/replace municipality #" Township| City| Borough" "")
-       "PA"])))
+     " "
+     [(format-streets streets)
+      (str/replace municipality #" Township| City| Borough" "")
+      "PA"])))
 
 (defn report-entry [f]
   [:li
    [:div.streets
-     (e/link-to
-       {:target "_blank"}
-       (u/url "https://www.google.com/maps/search/"
-         {:api 1 :query (format-map-location f)})
-       (format-streets (:streets f)))]
+    (e/link-to
+     {:target "_blank"}
+     (u/url "https://www.google.com/maps/search/"
+            {:api 1 :query (format-map-location f)})
+     (format-streets (:streets f)))]
    [:div.municipality (:municipality f)]
    [:div.start-date (format-date (:start-date f))]
    [:div.title (:title f)]
-   [:div.units (str/join ", " (:units f))]]
-  )
+   [:div.units (str/join ", " (:units f))]])
 
 (comment
   {:uri "63d885a1-8b82-44ec-a7be-e159e8e34846",
@@ -238,22 +258,20 @@
    :streets ("Marietta Ave" "Westover Dr"),
    :units ("Amb 77-2"),
    :type :fact,
-   :xt/id {:uri "63d885a1-8b82-44ec-a7be-e159e8e34846", :type :fact}}
-  )
+   :xt/id {:uri "63d885a1-8b82-44ec-a7be-e159e8e34846", :type :fact}})
 
 (defn report-active [facts output-dir]
   (let [title "Active Incidents"]
     (spit (str output-dir "/index.html")
-      (str
-        (p/html5 {:lang "en"}
-          [:head
-           [:title title]
-           (p/include-css "style.css")]
-          [:body
-           [:h1 title]
-           [:ul
-            (map report-entry (reverse (sort-by :start-date facts)))
-            ]])))))
+          (str
+           (p/html5 {:lang "en"}
+                    [:head
+                     [:title title]
+                     (p/include-css "style.css")]
+                    [:body
+                     [:h1 title]
+                     [:ul
+                      (map report-entry (reverse (sort-by :start-date facts)))]])))))
 
 (defn copy-file! [src dest]
   (io/copy (io/input-stream (io/resource src)) (io/file dest)))
@@ -266,12 +284,17 @@
   (let [[action & args] args]
     (with-open [xtdb-node (start-xtdb! "data")]
       (case action
+        "cleanup"
+        (->> xtdb-node
+             get-all-facts
+             (pmap (comp (partial put-fact! xtdb-node) cleanup))
+             doall)
         "load"
         (doall
          (concat
-           (load-stage!
-             xtdb-node
-             "https://webcad.lcwc911.us/Pages/Public/LiveIncidentsFeed.aspx")
+          (load-stage!
+           xtdb-node
+           "https://webcad.lcwc911.us/Pages/Public/LiveIncidentsFeed.aspx")
           (transform-facts! xtdb-node)))
         "list-active"
         (let [stage (get-all-stage xtdb-node)
@@ -299,11 +322,11 @@
           (log/info "report-active <output-dir>")
           (do
             (doall
-              (concat
-                (load-stage!
-                  xtdb-node
-                  "https://webcad.lcwc911.us/Pages/Public/LiveIncidentsFeed.aspx")
-                (transform-facts! xtdb-node)))
+             (concat
+              (load-stage!
+               xtdb-node
+               "https://webcad.lcwc911.us/Pages/Public/LiveIncidentsFeed.aspx")
+              (transform-facts! xtdb-node)))
             (let [facts (get-all-active-facts xtdb-node)
                   output-dir (first args)]
               (report-active facts output-dir)
@@ -325,8 +348,8 @@
 
   (with-open [xtdb-node (start-xtdb! "data")]
     (load-stage!
-      xtdb-node
-      "https://webcad.lcwc911.us/Pages/Public/LiveIncidentsFeed.aspx"))
+     xtdb-node
+     "https://webcad.lcwc911.us/Pages/Public/LiveIncidentsFeed.aspx"))
 
   (-main "load")
 
@@ -336,19 +359,23 @@
 
   (-main "clear")
 
+  (-main "cleanup")
+
   (-main)
 
   (with-open [node (start-xtdb! "data")]
     (->>
-      (xt/q (xt/db node) '{:find [?description]
-                           :where [[?e :type :fact]
-                                   [?e :description ?description]]})
-      (mapv first)
-      (take 10)))
+     (xt/q (xt/db node) '{:find [?description]
+                          :where [[?e :type :fact]
+                                  [?e :description ?description]]})))
 
   (with-open [node (start-xtdb! "data")]
     (->>
-      (xt/attribute-stats node)
-      ))
+     (xt/attribute-stats node)))
+
+  (with-open [node (start-xtdb! "data")]
+    (->> node
+         get-all-facts
+         (take-last 10)))
 
   .)
