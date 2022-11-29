@@ -36,7 +36,7 @@
          :incident-type :medical
          :municipality "Salisbury Township"
          :streets ["Chestnut St" "McBridge St" "Anomcer Rd"]
-         :units ["Med 293 Chester" "Ambulance 49-2"]}
+         :units ["Med 293 Chester" "Amb 49-2"]}
         (parse
          {:description
           {:type "text/html"

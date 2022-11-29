@@ -271,6 +271,9 @@
    :type :fact,
    :xt/id {:uri "63d885a1-8b82-44ec-a7be-e159e8e34846", :type :fact}})
 
+(defn format-incident-type [type]
+  (str/capitalize (name type)))
+
 (defn report-active [facts output-dir]
   (let [title "Active Incidents"]
     (spit (str output-dir "/index.html")
@@ -281,8 +284,28 @@
                      (p/include-css "style.css")]
                     [:body
                      [:h1 title]
-                     [:ul
-                      (map report-entry (reverse (sort-by :start-date facts)))]])))))
+                     (for [type [:traffic :fire :medical]]
+                       (let [incidents (->>
+                                         facts
+                                         (filter
+                                           (fn [fact]
+                                             (= type (:incident-type fact))))
+                                         (sort-by :start-date)
+                                         reverse)]
+                         [:div.section
+                          [:h2
+                           (format-incident-type type)
+                           " ("
+                           (count incidents)
+                           ")"
+                           ]
+                          [:ul
+                           (map
+                             report-entry
+                             incidents)]]))])))))
+
+(comment
+  (map (fn [[k v]] [k v]) (group-by count ["hello" "there" "now"])))
 
 (defn copy-file! [src dest]
   (io/copy (io/input-stream (io/resource src)) (io/file dest)))
@@ -395,8 +418,7 @@
 
   (with-open [node (start-xtdb! "data")]
     (->> node
-      get-all-facts
-      (take 10)
-      ))
+         get-all-facts
+         (take 10)))
 
   .)
