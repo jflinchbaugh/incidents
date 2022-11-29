@@ -174,14 +174,14 @@
 (t/deftest test-incident-type
   (t/is (nil? (incident-type nil)))
   (t/is (nil? (incident-type {})))
-  (t/is (= :medical (incident-type {:title "Medical Emergency"})))
-  (t/is (= :medical (incident-type {:title "Something EMS"})))
-  (t/is (= :medical (incident-type {:title "Emergency Transfer"})))
-  (t/is (= :medical (incident-type {:title "Routine Transfer"})))
-  (t/is (= :traffic (incident-type {:title "Traffic Accident"})))
-  (t/is (= :traffic (incident-type {:title "Vehicle Fire"})))
-  (t/is (= :fire (incident-type {:title "Gas Leak"})))
-  )
+  (t/are [type title] (= type (incident-type {:title title}))
+    :medical "Medical Emergency"
+    :medical "Something EMS"
+    :medical "Emergency Transfer"
+    :medical "Routine Transfer"
+    :traffic "Traffic Accident"
+    :traffic "Vehicle Fire"
+    :fire "Gas Leak"))
 
 (t/deftest test-cleanup-fact
   (t/is (nil? (cleanup-fact nil)) "nil -> nil")
