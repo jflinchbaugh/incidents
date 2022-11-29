@@ -234,7 +234,7 @@
        (map (partial put-fact! node)))))))
 
 (defn format-date [d]
-  (t/format "yyyy-MM-dd HH:mm" (t/local-date-time d (t/zone-id))))
+  (t/format "yyyy-MM-dd HH:mm:ss" (t/local-date-time d (t/zone-id))))
 
 (defn- format-streets [streets]
   (str/join " & " streets))
