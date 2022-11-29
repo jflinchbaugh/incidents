@@ -138,21 +138,21 @@
     (load-stage! node (str (io/resource "incidents/feed-1.xml")))
     (t/is (= 3 (count (get-all-stage node))) "staging has data")
 
-    #_(t/is (empty? (get-all-facts node)) "facts start empty")
+    (t/is (empty? (get-all-facts node)) "facts start empty")
 
-    #_(transform-facts! node)
-    #_(t/is (= 3 (count (get-all-facts node))) "facts are loaded from staging")
+    (transform-facts! node)
+    (t/is (= 3 (count (get-all-facts node))) "facts are loaded from staging")
 
-    #_(load-stage! node (str (io/resource "incidents/feed-2.xml")))
-    #_(t/is (= 3 (count (get-all-stage node))) "staging has data")
+    (load-stage! node (str (io/resource "incidents/feed-2.xml")))
+    (t/is (= 3 (count (get-all-stage node))) "staging has data")
 
-    #_(transform-facts! node)
-    #_(t/is (= 4 (count (get-all-facts node))) "facts are loaded from staging")
+    (transform-facts! node)
+    (t/is (= 4 (count (get-all-facts node))) "facts are loaded from staging")
 
-    #_(t/is (clear-all-stage! node) "evict all of staging")
-    #_(t/is (empty? (get-all-stage node)) "staging is again empty")
+    (t/is (clear-all-stage! node) "evict all of staging")
+    (t/is (empty? (get-all-stage node)) "staging is again empty")
 
-    #_(t/is (= 4 (count (get-all-facts node))) "facts are still there")
+    (t/is (= 4 (count (get-all-facts node))) "facts are still there")
     ))
 
 (t/deftest test-xtdb
