@@ -178,14 +178,11 @@
 
 (defn cleanup [fact]
   (->>
-    {:xt/id (:xt/id fact)
-     :uri (:uri fact)
-     :type (:type fact)
-     :start-date (:start-date fact)
-     :title (format-title (:title fact))
+    {:title (format-title (:title fact))
      :municipality (format-municipality (:municipality fact))
      :streets (map format-street (:streets fact))
      :units (map format-unit (:units fact))}
+    (merge fact)
     add-incident-type))
 
 (defn add-fact-id [fact]
