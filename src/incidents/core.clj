@@ -167,22 +167,22 @@
                           [nil streets]
                           [streets units])]
     (->>
-      {:uri (:uri in)
-         :start-date (:published-date in)
-         :title (format-title (:title in))
-         :municipality (format-municipality municipality)
-         :streets (parse-streets streets)
-       :units (parse-units units)}
-      add-incident-type)))
+     {:uri (:uri in)
+      :start-date (:published-date in)
+      :title (format-title (:title in))
+      :municipality (format-municipality municipality)
+      :streets (parse-streets streets)
+      :units (parse-units units)}
+     add-incident-type)))
 
 (defn cleanup [fact]
   (->>
-    {:title (format-title (:title fact))
-     :municipality (format-municipality (:municipality fact))
-     :streets (map format-street (:streets fact))
-     :units (map format-unit (:units fact))}
-    (merge fact)
-    add-incident-type))
+   {:title (format-title (:title fact))
+    :municipality (format-municipality (:municipality fact))
+    :streets (map format-street (:streets fact))
+    :units (map format-unit (:units fact))}
+   (merge fact)
+   add-incident-type))
 
 (defn add-fact-id [fact]
   (assoc fact :xt/id (tag :fact {:uri (:uri fact)})))
