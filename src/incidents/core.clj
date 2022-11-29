@@ -261,16 +261,6 @@
    [:div.title (:title f)]
    [:div.units (str/join ", " (:units f))]])
 
-(comment
-  {:uri "63d885a1-8b82-44ec-a7be-e159e8e34846",
-   :start-date #inst "2022-11-10T18:37:25.000-00:00",
-   :title "Routine Transfer-class 3",
-   :municipality "West Hempfield Township",
-   :streets ("Marietta Ave" "Westover Dr"),
-   :units ("Amb 77-2"),
-   :type :fact,
-   :xt/id {:uri "63d885a1-8b82-44ec-a7be-e159e8e34846", :type :fact}})
-
 (defn format-incident-type [type]
   (str/capitalize (name type)))
 
@@ -303,9 +293,6 @@
                             (map
                              report-entry
                              incidents)]])))])))))
-
-(comment
-  (map (fn [[k v]] [k v]) (group-by count ["hello" "there" "now"])))
 
 (defn copy-file! [src dest]
   (io/copy (io/input-stream (io/resource src)) (io/file dest)))
