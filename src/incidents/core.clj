@@ -180,7 +180,7 @@
       :units (parse-units units)}
      add-incident-type)))
 
-(defn cleanup [fact]
+(defn cleanup-fact [fact]
   (if
    (nil? fact) nil
    (->>
@@ -315,7 +315,7 @@
         "cleanup"
         (->> xtdb-node
              get-all-facts
-             (pmap (comp (partial put-fact! xtdb-node) cleanup))
+             (pmap (comp (partial put-fact! xtdb-node) cleanup-fact))
              doall
              (#(log/info "Processed: " (count %))))
         "load"

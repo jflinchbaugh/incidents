@@ -183,8 +183,8 @@
   (t/is (= :fire (incident-type {:title "Gas Leak"})))
   )
 
-(t/deftest test-cleanup
-  (t/is (nil? (cleanup nil)) "nil -> nil")
+(t/deftest test-cleanup-fact
+  (t/is (nil? (cleanup-fact nil)) "nil -> nil")
   (t/is (=
           {:title nil
            :incident-type nil
@@ -192,7 +192,7 @@
            :streets []
            :units []
            }
-          (cleanup {}))
+          (cleanup-fact {}))
     "empty record gets nils")
   (t/is (=
           {:title "The Title-With Hyphen"
@@ -200,7 +200,7 @@
            :municipality "A Place"
            :streets ["A" "B"]
            :units ["X" "Y"]}
-          (cleanup {:title " the title-with hyphen "
+          (cleanup-fact {:title " the title-with hyphen "
                     :municipality " a place "
                     :streets [" a " " b "]
                     :units [" x " " y "]
