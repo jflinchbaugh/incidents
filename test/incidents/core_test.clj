@@ -46,7 +46,26 @@
           :published-date #inst "2022-08-11T03:42:39.000-00:00"
           :title "MEDICAL EMERGENCY"
           :uri "021cb6cb-b2bc-405a-86d9-73376696bc14"
-          :type :stage})))))
+          :type :stage}))))
+  (t/testing "parse county lacks streets"
+    (t/is
+      (= {:uri "021cb6cb-b2bc-405a-86d9-73376696bc14"
+          :start-date #inst "2022-08-11T03:42:39.000-00:00"
+          :title "Medical Emergency"
+          :incident-type :medical
+          :municipality "Berks County"
+          :streets []
+          :units ["Med 293 Chester" "Amb 49-2"]}
+        (parse
+          {:description
+           {:type "text/html"
+            :value
+            "BERKS COUNTY; MED 293 CHESTER<br> AMB 49-2; "}
+           :link "http://www.lcwc911.us/lcwc/lcwc/publiccad.asp",
+           :published-date #inst "2022-08-11T03:42:39.000-00:00"
+           :title "MEDICAL EMERGENCY"
+           :uri "021cb6cb-b2bc-405a-86d9-73376696bc14"
+           :type :stage})))))
 
 (t/deftest test-tag
   (t/is (= {:thing :value :type :stage} (tag :stage {:thing :value}))))
