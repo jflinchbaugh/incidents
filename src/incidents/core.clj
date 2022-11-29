@@ -118,7 +118,6 @@
    {"Bls" "BLS"
     "Ems" "EMS"
     "Qrs" "QRS"
-    "Amb" "Ambulance"
     "Tac" "TAC"
     "Int" "INT"
     "1a" "1A"
