@@ -206,13 +206,3 @@
                     :units [" x " " y "]
                     }))
     "cleanup casing and whitespace"))
-
-(comment
-
-  (def test-node (xt/start-node {}))
-
-  (xt/attribute-stats test-node)
-
-  (.close test-node)
-
-  .)
