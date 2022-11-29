@@ -284,25 +284,25 @@
                      (p/include-css "style.css")]
                     [:body
                      [:h1 title]
-                     (for [type [:traffic :fire :medical]]
-                       (let [incidents (->>
+                     (apply
+                      concat
+                      (for [type [:traffic :fire :medical]]
+                        (let [incidents (->>
                                          facts
                                          (filter
-                                           (fn [fact]
-                                             (= type (:incident-type fact))))
+                                          (fn [fact]
+                                            (= type (:incident-type fact))))
                                          (sort-by :start-date)
                                          reverse)]
-                         [:div.section
-                          [:h2
-                           (format-incident-type type)
-                           " ("
-                           (count incidents)
-                           ")"
-                           ]
-                          [:ul
-                           (map
+                          [[:h2
+                            (format-incident-type type)
+                            " ("
+                            (count incidents)
+                            ")"]
+                           [:ul
+                            (map
                              report-entry
-                             incidents)]]))])))))
+                             incidents)]])))])))))
 
 (comment
   (map (fn [[k v]] [k v]) (group-by count ["hello" "there" "now"])))
