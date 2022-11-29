@@ -113,7 +113,7 @@
      (map (partial put-stage! node))
      doall)))
 
-(defn- override [s]
+(defn override [s]
   (get
    {"Bls" "BLS"
     "Ems" "EMS"
@@ -127,37 +127,42 @@
    s
    s))
 
-(defn- mc-fix [s]
+(defn mc-fix [s]
   (str/replace
    s
    #"^Mc(.)"
    (fn [[_ letter]] (str "Mc" (str/upper-case letter)))))
 
-(defn- title-case [s]
+(defn title-case [s]
   (str/join (map (comp mc-fix override str/capitalize) (str/split s #"\b"))))
 
 (def format-unit (comp title-case str/trim))
 
 (def format-street (comp title-case str/trim))
 
-(defn- parse-units [s]
+(defn parse-units [s]
   (if (nil? s) '()
       (map format-unit (str/split s #"<br>"))))
 
-(defn- parse-streets [s]
+(defn parse-streets [s]
   (if (nil? s) '()
       (map format-street (str/split s #"[&/]"))))
 
-(defn- format-title [title]
-  (-> title
-      (str/replace #" +- +" "-")
-      title-case))
+(defn format-title [title]
+  (if (nil? title) nil
+      (->
+       title
+       (str/replace #" +- +" "-")
+       title-case
+       str/trim)))
 
-(defn- format-municipality [name]
-  (str/trim (title-case name)))
+(defn format-municipality [name]
+  (if (nil? name) nil
+      (str/trim (title-case name))))
 
 (defn add-incident-type [fact]
-  (assoc fact :incident-type (incident-type fact)))
+  (if (nil? fact) nil
+      (assoc fact :incident-type (incident-type fact))))
 
 (defn parse [in]
   (let [parts (str/split (get-in in [:description :value]) #"; *")
@@ -176,13 +181,15 @@
      add-incident-type)))
 
 (defn cleanup [fact]
-  (->>
-   {:title (format-title (:title fact))
-    :municipality (format-municipality (:municipality fact))
-    :streets (map format-street (:streets fact))
-    :units (map format-unit (:units fact))}
-   (merge fact)
-   add-incident-type))
+  (if
+   (nil? fact) nil
+   (->>
+    {:title (format-title (:title fact))
+     :municipality (format-municipality (:municipality fact))
+     :streets (map format-street (:streets fact))
+     :units (map format-unit (:units fact))}
+    (merge fact)
+    add-incident-type)))
 
 (defn add-fact-id [fact]
   (assoc fact :xt/id (tag :fact {:uri (:uri fact)})))

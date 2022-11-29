@@ -47,6 +47,25 @@
           :title "MEDICAL EMERGENCY"
           :uri "021cb6cb-b2bc-405a-86d9-73376696bc14"
           :type :stage}))))
+  (t/testing "parse all the values and trim"
+    (t/is
+      (= {:uri "021cb6cb-b2bc-405a-86d9-73376696bc14"
+          :start-date #inst "2022-08-11T03:42:39.000-00:00"
+          :title "Medical Emergency-Whatever"
+          :incident-type :medical
+          :municipality "Salisbury Township"
+          :streets ["Chestnut St" "McBridge St" "Anomcer Rd"]
+          :units ["Med 293 Chester" "Amb 49-2"]}
+        (parse
+          {:description
+           {:type "text/html"
+            :value
+            " SALISBURY TOWNSHIP ;  CHESTNUT ST & MCBRIDGE ST / ANOMCER RD ;  MED 293 CHESTER <br> AMB 49-2 ; "}
+           :link "http://www.lcwc911.us/lcwc/lcwc/publiccad.asp",
+           :published-date #inst "2022-08-11T03:42:39.000-00:00"
+           :title " MEDICAL EMERGENCY-WHATEVER "
+           :uri "021cb6cb-b2bc-405a-86d9-73376696bc14"
+           :type :stage}))))
   (t/testing "parse county lacks streets"
     (t/is
       (= {:uri "021cb6cb-b2bc-405a-86d9-73376696bc14"
@@ -163,6 +182,30 @@
   (t/is (= :traffic (incident-type {:title "Vehicle Fire"})))
   (t/is (= :fire (incident-type {:title "Gas Leak"})))
   )
+
+(t/deftest test-cleanup
+  (t/is (nil? (cleanup nil)) "nil -> nil")
+  (t/is (=
+          {:title nil
+           :incident-type nil
+           :municipality nil
+           :streets []
+           :units []
+           }
+          (cleanup {}))
+    "empty record gets nils")
+  (t/is (=
+          {:title "The Title-With Hyphen"
+           :incident-type :fire
+           :municipality "A Place"
+           :streets ["A" "B"]
+           :units ["X" "Y"]}
+          (cleanup {:title " the title-with hyphen "
+                    :municipality " a place "
+                    :streets [" a " " b "]
+                    :units [" x " " y "]
+                    }))
+    "cleanup casing and whitespace"))
 
 (comment
 
