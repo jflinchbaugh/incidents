@@ -1,25 +1,25 @@
-;; hello clerk
+;; incident data
+
+^{:nextjournal.clerk/visibility {:code :hide :result :hide}}
 (ns incidents
   (:require [nextjournal.clerk :as clerk]
             [xtdb.api :as xt]
             [incidents.core :refer :all]
             ))
 
-;; Here's a visualization of unemployment in the US.
-#_(clerk/vl {:width 700 :height 400 :data {:url "https://vega.github.io/vega-datasets/data/us-10m.json"
-                                         :format {:type "topojson" :feature "counties"}}
-           :transform [{:lookup "id" :from {:data {:url "https://vega.github.io/vega-datasets/data/unemployment.tsv"}
-                                            :key "id" :fields ["rate"]}}]
-           :projection {:type "albersUsa"} :mark "geoshape" :encoding {:color {:field "rate" :type "quantitative"}}})
-
+;; all the incidents in a map
+^{:nextjournal.clerk/visibility {:code :fold}}
 (def incidents (with-open [node (start-xtdb! "data")]
                  (->> node
                    get-all-facts
                    (sort-by :duration-minutes)
                    reverse)))
 
+;; all incidents in a table
+^{:nextjournal.clerk/visibility {:code :fold}}
 (clerk/table incidents)
 
+^{:nextjournal.clerk/visibility {:code :fold}}
 (clerk/vl
   {:data {:values incidents}
    :width 600
