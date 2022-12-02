@@ -302,7 +302,8 @@
                            [:ul
                             (map
                              report-entry
-                             incidents)]])))])))))
+                             incidents)]])))
+                     (e/link-to "clerk/index.html" "Clerk")])))))
 
 (defn copy-file! [src dest]
   (io/copy (io/input-stream (io/resource src)) (io/file dest)))
