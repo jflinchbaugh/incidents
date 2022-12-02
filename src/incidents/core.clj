@@ -313,7 +313,7 @@
   (copy-file! "web/style.css" (str dest "/style.css")))
 
 (defn start-clerk! []
-  (clerk/serve! {:watch-paths ["notebooks"]}))
+  (clerk/serve! {:browse? true :watch-paths ["notebooks"]}))
 
 (defn stop-clerk! []
   (clerk/halt!))
