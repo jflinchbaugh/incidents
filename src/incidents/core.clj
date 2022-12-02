@@ -366,12 +366,22 @@
         (log/info "cleanup|list-active|list-all|report-active|load|clear")))))
 
 (defn start-clerk! []
-  (clerk/serve! {:watch-paths ["notebooks" "src"]})
+  (clerk/serve! {:watch-paths ["notebooks"]}))
+
+(defn stop-clerk! []
+  (clerk/halt!))
+
+(defn build-clerk! []
+  (clerk/build! {:paths ["notebooks/incidents.clj"]})
   )
 
 (comment
 
   (start-clerk!)
+
+  (stop-clerk!)
+
+  (build-clerk!)
 
   (with-open [xtdb-node (start-xtdb! "data")]
     (transform-facts! xtdb-node))
