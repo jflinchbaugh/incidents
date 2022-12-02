@@ -1,5 +1,5 @@
 ;; hello clerk
-(ns hello
+(ns incidents
   (:require [nextjournal.clerk :as clerk]
             [xtdb.api :as xt]
             [incidents.core :refer :all]
