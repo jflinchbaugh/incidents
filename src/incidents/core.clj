@@ -10,7 +10,8 @@
             [hiccup.core :as h]
             [hiccup.page :as p]
             [hiccup.element :as e]
-            [hiccup.util :as u]))
+            [hiccup.util :as u]
+            [nextjournal.clerk :as clerk]))
 
 (log/merge-config! {:ns-filter #{"incidents.*"}})
 
@@ -364,7 +365,13 @@
         (doall (map #(log/info %) (clear-all-stage! xtdb-node)))
         (log/info "cleanup|list-active|list-all|report-active|load|clear")))))
 
+(defn start-clerk! []
+  (clerk/serve! {:watch-paths ["notebooks" "src"]})
+  )
+
 (comment
+
+  (start-clerk!)
 
   (with-open [xtdb-node (start-xtdb! "data")]
     (transform-facts! xtdb-node))
