@@ -5,29 +5,47 @@
   (:require [nextjournal.clerk :as clerk]
             [xtdb.api :as xt]
             [incidents.core :refer :all]
-            ))
+            [clojure.string :as str]))
 
 ;; all the incidents in a map
-^{:nextjournal.clerk/visibility {:code :fold}}
 (def incidents (with-open [node (start-xtdb! "data")]
                  (->> node
-                   get-all-facts
-                   (sort-by :duration-minutes)
-                   reverse)))
+                      get-all-facts
+                      (sort-by :duration-minutes)
+                      reverse)))
 
-;; all incidents in a table
-^{:nextjournal.clerk/visibility {:code :fold}}
-(clerk/table incidents)
+;; counts by intersection
+(clerk/table
+ (clerk/use-headers
+  (cons ["Municipality" "Intersection" "Incidents"]
+        (->>
+         incidents
+         (group-by (fn [i] (cons (:municipality i) (sort (:streets i)))))
+         (map
+           (fn [[[municipality & streets] v]]
+             [municipality (str/join " & " streets) (count v)]))
+         (sort-by last)
+         reverse))))
 
-^{:nextjournal.clerk/visibility {:code :fold}}
+;; counts by municipality
+(clerk/table
+  (clerk/use-headers
+    (cons ["Municipality" "Incidents"]
+      (->>
+        incidents
+        (group-by :municipality)
+        (map
+          (fn [[municipality v]]
+            [municipality (count v)]))
+        (sort-by last)
+        reverse))))
+
 (clerk/vl
-  {:data {:values incidents}
-   :width 600
-   :height 1600
-   :mark {:type "point"
-          :tooltip {:field :streets}}
-   :encoding {:x {:field :incident-type
-                  :type :nominal}
-              :y {:field :duration-minutes
-                  :type :quantitative
-                  :sort "x"}}})
+ {:data {:values incidents}
+  :mark {:type "point"
+         :tooltip {:field :streets}}
+  :encoding {:y {:field :incident-type
+                 :type :nominal}
+             :x {:field :municipality
+                 :type :nominal
+                 :sort "x"}}})
