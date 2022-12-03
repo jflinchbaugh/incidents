@@ -384,7 +384,6 @@
           (log/info "cleanup|list-active|list-all|report-active|load|clear"))))))
 
 (comment
-
   (start-clerk!)
 
   (stop-clerk!)
