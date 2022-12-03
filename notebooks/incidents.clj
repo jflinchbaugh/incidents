@@ -9,6 +9,7 @@
    [clojure.string :as str]))
 
 ^{:nextjournal.clerk/visibility {:code :hide :result :hide}}
+^::clerk/no-cache
 (def incidents (with-open [node (start-xtdb! "data")]
                  (->> node
                       get-all-facts
