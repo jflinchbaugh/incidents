@@ -16,6 +16,5 @@
 
  :aliases
  {
-  :project/run {:exec-fn incidents.core/-main}
   }
 }
