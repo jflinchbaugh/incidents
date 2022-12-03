@@ -303,7 +303,10 @@
                             (map
                              report-entry
                              incidents)]])))
-                     (e/link-to "clerk/index.html" "Clerk")])))))
+                     (e/link-to
+                       {:target "_blank"}
+                       "clerk/index.html"
+                       "Clerk")])))))
 
 (defn copy-file! [src dest]
   (io/copy (io/input-stream (io/resource src)) (io/file dest)))
