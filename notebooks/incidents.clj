@@ -30,6 +30,31 @@
      :layout {:title "Incident Count by Date"}}))
 
 (clerk/plotly
+ (let [muni-count (->>
+                   incidents
+                   (group-by :municipality)
+                   (map
+                    (fn [[municipality v]]
+                      [municipality (count v)]))
+                   (sort-by last)
+                   reverse)]
+   {:data [{:x (map first muni-count)
+            :y (map second muni-count)
+            :type "bar"}]
+    :layout {:title "Incident Count by Municipality"}}))
+
+(clerk/table
+  {:head ["Municipality" "Incidents"]
+   :rows (->>
+           incidents
+           (group-by :municipality)
+           (map
+             (fn [[municipality v]]
+               [municipality (count v)]))
+           (sort-by last)
+           reverse)})
+
+(clerk/plotly
   (let [muni-count (->>
                      incidents
                      (group-by (fn [i] (cons (:municipality i) (sort (:streets i)))))
@@ -59,28 +84,3 @@
              (count v)]))
          (sort-by last)
          reverse)})
-
-(clerk/plotly
- (let [muni-count (->>
-                   incidents
-                   (group-by :municipality)
-                   (map
-                    (fn [[municipality v]]
-                      [municipality (count v)]))
-                   (sort-by last)
-                   reverse)]
-   {:data [{:x (map first muni-count)
-            :y (map second muni-count)
-            :type "bar"}]
-    :layout {:title "Incident Count by Municipality"}}))
-
-(clerk/table
-  {:head ["Municipality" "Incidents"]
-   :rows (->>
-           incidents
-           (group-by :municipality)
-           (map
-             (fn [[municipality v]]
-               [municipality (count v)]))
-           (sort-by last)
-           reverse)})
