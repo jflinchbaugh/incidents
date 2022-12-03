@@ -241,11 +241,14 @@
        updated-facts
        (map (partial put-fact! node)))))))
 
+(defn format-date-part [fmt d]
+  (t/format fmt (t/local-date-time d (t/zone-id))))
+
 (defn format-date-time [d]
-  (t/format "yyyy-MM-dd HH:mm:ss" (t/local-date-time d (t/zone-id))))
+  (format-date-part "yyyy-MM-dd HH:mm:ss" d))
 
 (defn format-date [d]
-  (t/format "yyyy-MM-dd" (t/local-date-time d (t/zone-id))))
+  (format-date-part "yyyy-MM-dd" d))
 
 (defn format-streets [streets]
   (str/join " & " streets))

@@ -30,6 +30,32 @@
      :layout {:title "Incident Count by Date"}}))
 
 (clerk/plotly
+  (let [fact-count (->>
+                     incidents
+                     (group-by (fn [i] (format-date-part "HH" (:start-date i))))
+                     (map
+                       (fn [[start-date v]]
+                         [start-date (count v)]))
+                     (sort-by first))]
+    {:data [{:x (map first fact-count)
+             :y (map second fact-count)
+             :type "bar"}]
+     :layout {:title "Incident Count by Hour"}}))
+
+(clerk/plotly
+  (let [fact-count (->>
+                     incidents
+                     (group-by (fn [i] (format-date-part "e E" (:start-date i))))
+                     (map
+                       (fn [[start-date v]]
+                         [start-date (count v)]))
+                     (sort-by first))]
+    {:data [{:x (map first fact-count)
+             :y (map second fact-count)
+             :type "bar"}]
+     :layout {:title "Incident Count by Day"}}))
+
+(clerk/plotly
  (let [muni-count (->>
                    incidents
                    (group-by :municipality)
