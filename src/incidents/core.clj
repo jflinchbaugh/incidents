@@ -251,18 +251,19 @@
   (str/join " & " streets))
 
 (defn format-map-location
-  ([municipality streets]
-   (str/join
-     " "
-     [(format-streets streets)
-      (str/replace municipality #" Township| City| Borough" "")
-      "PA"]))
-  ([fact]
-   (format-map-location (:municipality fact) (:streets fact))))
+  [municipality streets]
+  (str/join
+    " "
+    [(format-streets streets)
+     (str/replace municipality #" Township| City| Borough" "")
+     "PA"]))
 
-(defn map-link [municipality streets]
-  (u/url "https://www.google.com/maps/search/"
-    {:api 1 :query (format-map-location municipality streets)}))
+(defn map-link
+  ([municipality streets]
+                (u/url "https://www.google.com/maps/search/"
+                  {:api 1 :query (format-map-location municipality streets)}))
+  ([fact]
+   (map-link (:municipality fact) (:streets fact))))
 
 (defn report-entry [f]
   [:li
