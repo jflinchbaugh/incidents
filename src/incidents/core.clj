@@ -244,25 +244,29 @@
 (defn format-date [d]
   (t/format "yyyy-MM-dd HH:mm:ss" (t/local-date-time d (t/zone-id))))
 
-(defn- format-streets [streets]
+(defn format-streets [streets]
   (str/join " & " streets))
 
-(defn- format-map-location [fact]
-  (let [municipality (:municipality fact)
-        streets (:streets fact)]
-    (str/join
+(defn format-map-location
+  ([municipality streets]
+   (str/join
      " "
      [(format-streets streets)
       (str/replace municipality #" Township| City| Borough" "")
-      "PA"])))
+      "PA"]))
+  ([fact]
+   (format-map-location (:municipality fact) (:streets fact))))
+
+(defn map-link [municipality streets]
+  (u/url "https://www.google.com/maps/search/"
+    {:api 1 :query (format-map-location municipality streets)}))
 
 (defn report-entry [f]
   [:li
    [:div.streets
     (e/link-to
      {:target "_blank"}
-     (u/url "https://www.google.com/maps/search/"
-            {:api 1 :query (format-map-location f)})
+     (map-link f)
      (format-streets (:streets f)))]
    [:div.municipality (:municipality f)]
    [:div.start-date (format-date (:start-date f))]
