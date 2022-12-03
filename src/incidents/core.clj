@@ -256,15 +256,15 @@
 (defn format-map-location
   [municipality streets]
   (str/join
-    " "
-    [(format-streets streets)
-     (str/replace municipality #" Township| City| Borough" "")
-     "PA"]))
+   " "
+   [(format-streets streets)
+    (str/replace municipality #" Township| City| Borough" "")
+    "PA"]))
 
 (defn map-link
   ([municipality streets]
-                (u/url "https://www.google.com/maps/search/"
-                  {:api 1 :query (format-map-location municipality streets)}))
+   (u/url "https://www.google.com/maps/search/"
+          {:api 1 :query (format-map-location municipality streets)}))
   ([fact]
    (map-link (:municipality fact) (:streets fact))))
 
@@ -315,9 +315,9 @@
                              report-entry
                              incidents)]])))
                      (e/link-to
-                       {:target "_blank"}
-                       "clerk/index.html"
-                       "Clerk")])))))
+                      {:target "_blank"}
+                      "clerk/index.html"
+                      "Clerk")])))))
 
 (defn copy-file! [src dest]
   (io/copy (io/input-stream (io/resource src)) (io/file dest)))
@@ -336,66 +336,103 @@
   (clerk/build! {:paths ["notebooks/incidents.clj"]
                  :out-path (io/file out-path "clerk")}))
 
+(def disconnected-actions
+  {"clerk" (fn [args]
+             (let [[output-dir] args]
+               (if (str/blank? output-dir)
+                 (log/info "clerk <output-dir>")
+                 (build-clerk! output-dir))))})
+
+(def connected-actions
+  {"cleanup"
+   (fn [xtdb-node args]
+     (->> xtdb-node
+          get-all-facts
+          (pmap (comp (partial put-fact! xtdb-node) cleanup-fact))
+          doall
+          (#(log/info "Processed: " (count %)))))
+
+   "load"
+   (fn [xtdb-node args]
+     (doall
+      (concat
+       (load-stage!
+        xtdb-node
+        "https://webcad.lcwc911.us/Pages/Public/LiveIncidentsFeed.aspx")
+       (transform-facts! xtdb-node))))
+
+   "list-active"
+   (fn [xtdb-node args]
+     (let [stage (get-all-stage xtdb-node)
+           facts (get-all-active-facts xtdb-node)]
+       (->> stage (map pp/pprint) doall)
+       (log/info "Count of Stage:" (count stage))
+       (->> facts (map pp/pprint) doall)
+       (log/info "Count of Facts:" (count facts))))
+
+   "list-all"
+   (fn [xtdb-node args]
+     (let [stage (get-all-stage xtdb-node)
+           facts (get-all-facts xtdb-node)]
+       (doall (map prn stage))
+       (log/info "Count of Stage:" (count stage))
+       (doall (map prn facts))
+       (log/info "Count of Facts:" (count facts))))
+
+   "clear"
+   (fn [xtdb-node args]
+     (doall (map #(log/info %) (clear-all-stage! xtdb-node))))})
+
+(def connected-report-actions
+  {
+   "report-active"
+   (fn [xtdb-node args]
+     (let [facts (get-all-active-facts xtdb-node)
+           output-dir (first args)]
+       (report-active facts output-dir)
+       (copy-resources! output-dir)))
+
+   "load-and-report"
+   (fn [xtdb-node args]
+     (doall
+       (concat
+         (load-stage!
+           xtdb-node
+           "https://webcad.lcwc911.us/Pages/Public/LiveIncidentsFeed.aspx")
+         (transform-facts! xtdb-node)))
+     (let [facts (get-all-active-facts xtdb-node)
+           output-dir (first args)]
+       (report-active facts output-dir)
+       (copy-resources! output-dir)))
+   })
+
 (defn -main [& args]
-  (let [[action & args] args]
-    (if (= "clerk" action)
-      (let [[output-dir] args]
-        (if (str/blank? output-dir)
-          (log/info "clerk <output-dir>")
-          (build-clerk! output-dir)))
+  (let [[action & args] args
+        disconnected-action (get disconnected-actions action)
+        connected-action (get connected-actions action)
+        connected-report-action (get connected-report-actions action)]
+    (cond
+      disconnected-action
+      (disconnected-action args)
+
+      connected-action
       (with-open [xtdb-node (start-xtdb! "data")]
-        (case action
-          "cleanup"
-          (->> xtdb-node
-            get-all-facts
-            (pmap (comp (partial put-fact! xtdb-node) cleanup-fact))
-            doall
-            (#(log/info "Processed: " (count %))))
-          "load"
-          (doall
-            (concat
-              (load-stage!
-                xtdb-node
-                "https://webcad.lcwc911.us/Pages/Public/LiveIncidentsFeed.aspx")
-              (transform-facts! xtdb-node)))
-          "list-active"
-          (let [stage (get-all-stage xtdb-node)
-                facts (get-all-active-facts xtdb-node)]
-            (->> stage (map pp/pprint) doall)
-            (log/info "Count of Stage:" (count stage))
-            (->> facts (map pp/pprint) doall)
-            (log/info "Count of Facts:" (count facts)))
-          "list-all"
-          (let [stage (get-all-stage xtdb-node)
-                facts (get-all-facts xtdb-node)]
-            (doall (map prn stage))
-            (log/info "Count of Stage:" (count stage))
-            (doall (map prn facts))
-            (log/info "Count of Facts:" (count facts)))
-          "report-active"
-          (if (str/blank? (first args))
-            (log/info "report-active <output-dir>")
-            (let [facts (get-all-active-facts xtdb-node)
-                  output-dir (first args)]
-              (report-active facts output-dir)
-              (copy-resources! output-dir)))
-          "load-and-report"
-          (if (str/blank? (first args))
-            (log/info "report-active <output-dir>")
-            (do
-              (doall
-                (concat
-                  (load-stage!
-                    xtdb-node
-                    "https://webcad.lcwc911.us/Pages/Public/LiveIncidentsFeed.aspx")
-                  (transform-facts! xtdb-node)))
-              (let [facts (get-all-active-facts xtdb-node)
-                    output-dir (first args)]
-                (report-active facts output-dir)
-                (copy-resources! output-dir))))
-          "clear"
-          (doall (map #(log/info %) (clear-all-stage! xtdb-node)))
-          (log/info "cleanup|list-active|list-all|report-active|load|clear"))))))
+        (connected-action xtdb-node args))
+
+      connected-report-action
+      (if (str/blank? (first args))
+        (log/info "Usage:" action "<output-dir>")
+        (with-open [xtdb-node (start-xtdb! "data")]
+          (connected-report-action xtdb-node args)))
+
+      :else
+      (log/info
+       "Usage:"
+       (->>
+        [connected-actions connected-report-actions disconnected-actions]
+        (map keys)
+        (apply concat)
+        (str/join "|"))))))
 
 (comment
   (start-clerk!)
