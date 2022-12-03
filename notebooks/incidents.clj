@@ -6,8 +6,7 @@
    [nextjournal.clerk.viewer :as v]
    [xtdb.api :as xt]
    [incidents.core :refer :all]
-   [clojure.string :as str]
-   [hiccup.element :as e]))
+   [clojure.string :as str]))
 
 ^{:nextjournal.clerk/visibility {:code :hide :result :hide}}
 (def incidents (with-open [node (start-xtdb! "data")]
@@ -15,6 +14,19 @@
                       get-all-facts
                       (sort-by :duration-minutes)
                       reverse)))
+
+(clerk/plotly
+  (let [fact-count (->>
+                     incidents
+                     (group-by (fn [i] (format-date (:start-date i))))
+                     (map
+                       (fn [[start-date v]]
+                         [start-date (count v)]))
+                     (sort-by first))]
+    {:data [{:x (map first fact-count)
+             :y (map second fact-count)
+             :type "bar"}]
+     :layout {:title "Incident Count by Date"}}))
 
 (clerk/plotly
   (let [muni-count (->>

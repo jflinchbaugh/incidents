@@ -241,8 +241,11 @@
        updated-facts
        (map (partial put-fact! node)))))))
 
-(defn format-date [d]
+(defn format-date-time [d]
   (t/format "yyyy-MM-dd HH:mm:ss" (t/local-date-time d (t/zone-id))))
+
+(defn format-date [d]
+  (t/format "yyyy-MM-dd" (t/local-date-time d (t/zone-id))))
 
 (defn format-streets [streets]
   (str/join " & " streets))
@@ -269,7 +272,7 @@
      (map-link f)
      (format-streets (:streets f)))]
    [:div.municipality (:municipality f)]
-   [:div.start-date (format-date (:start-date f))]
+   [:div.start-date (format-date-time (:start-date f))]
    [:div.title (:title f)]
    [:div.units (str/join ", " (:units f))]])
 
