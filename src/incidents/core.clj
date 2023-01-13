@@ -384,8 +384,7 @@
      (doall (map #(log/info %) (clear-all-stage! xtdb-node))))})
 
 (def connected-report-actions
-  {
-   "report-active"
+  {"report-active"
    (fn [xtdb-node args]
      (let [facts (get-all-active-facts xtdb-node)
            output-dir (first args)]
@@ -395,16 +394,15 @@
    "load-and-report"
    (fn [xtdb-node args]
      (doall
-       (concat
-         (load-stage!
-           xtdb-node
-           "https://webcad.lcwc911.us/Pages/Public/LiveIncidentsFeed.aspx")
-         (transform-facts! xtdb-node)))
+      (concat
+       (load-stage!
+        xtdb-node
+        "https://webcad.lcwc911.us/Pages/Public/LiveIncidentsFeed.aspx")
+       (transform-facts! xtdb-node)))
      (let [facts (get-all-active-facts xtdb-node)
            output-dir (first args)]
        (report-active facts output-dir)
-       (copy-resources! output-dir)))
-   })
+       (copy-resources! output-dir)))})
 
 (defn -main [& args]
   (let [[action & args] args
@@ -432,7 +430,8 @@
         [connected-actions connected-report-actions disconnected-actions]
         (map keys)
         (apply concat)
-        (str/join "|"))))))
+        (str/join "|")))))
+  (shutdown-agents))
 
 (comment
   (start-clerk!)
