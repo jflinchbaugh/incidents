@@ -2,7 +2,7 @@
   (:require [incidents.core :refer :all]
             [clojure.test :as t]
             [feedparser-clj.core :as feed]
-            [java-time :as jt]
+            [tick.core :as tc]
             [xtdb.api :as xt]
             [clojure.java.io :as io]
             [test-with-files.tools :refer [with-tmp-dir]]
@@ -114,8 +114,8 @@
            :nil-field nil}))))
 
 (t/deftest test-end
-  (let [now (jt/local-date-time)
-        start-time (jt/minus now (jt/minutes 10))]
+  (let [now (tc/inst)
+        start-time (tc/<< now (tc/new-duration 10 :minutes))]
     (t/is (=
            {:key :val
             :start-date start-time

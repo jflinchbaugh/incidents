@@ -4,7 +4,7 @@
             [clojure.java.io :as io]
             [xtdb.api :as xt]
             [clojure.pprint :as pp]
-            [java-time.api :as t]
+            [tick.core :as tc]
             [taoensso.timbre :as log]
             [clojure.string :as str]
             [hiccup.core :as h]
@@ -218,7 +218,7 @@
 (defn end [date fact]
   (assoc fact
          :end-date date
-         :duration-minutes (t/as (t/duration (:start-date fact) date) :minutes)))
+         :duration-minutes (tc/minutes (tc/between (:start-date fact) date))))
 
 (defn transform-facts! [node]
   (let [active-facts (get-all-active-facts node)
@@ -235,14 +235,14 @@
      (concat
       (->>
        ended-facts
-       (map (partial end (t/java-date)))
+       (map (partial end (tc/inst)))
        (map (partial put-fact! node)))
       (->>
        updated-facts
        (map (partial put-fact! node)))))))
 
 (defn format-date-part [fmt d]
-  (t/format fmt (t/local-date-time d (t/zone-id))))
+  (tc/format fmt (tc/date-time d)))
 
 (defn format-date-time [d]
   (format-date-part "yyyy-MM-dd HH:mm:ss" d))
