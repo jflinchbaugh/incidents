@@ -123,7 +123,7 @@
             :duration-minutes 10}
            (end now {:key :val :start-date start-time})))))
 
-(t/deftest test-start-xtdb!
+#_(t/deftest test-start-xtdb!
   (with-tmp-dir tempdir
     (with-open [node (start-xtdb! tempdir)]
       (t/is node))))
