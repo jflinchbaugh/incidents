@@ -10,7 +10,7 @@
 
 ^{:nextjournal.clerk/visibility {:code :hide :result :hide}}
 ^::clerk/no-cache
-(def incidents (with-open [node (start-xtdb! "data")]
+(def incidents (with-open [node (start-xtdb!)]
                  (->> node
                       get-all-facts
                       (sort-by :duration-minutes)

@@ -3,6 +3,7 @@
   (:require [feedparser-clj.core :as feed]
             [clojure.java.io :as io]
             [xtdb.api :as xt]
+            [xtdb.remote-api-client :as xtc]
             [clojure.pprint :as pp]
             [tick.core :as tc]
             [taoensso.timbre :as log]
@@ -15,18 +16,36 @@
 
 (log/merge-config! {:ns-filter #{"incidents.*"}})
 
-(defn start-xtdb! [dir]
-  (letfn [(kv-store [d]
-            {:kv-store {:xtdb/module 'xtdb.rocksdb/->kv-store
-                        :db-dir d
-                        :sync? true}})]
-    (xt/start-node
-     {:xtdb/tx-log (kv-store (io/file dir "tx-log"))
-      :xtdb/document-store (kv-store (io/file dir "doc-store"))
-      :xtdb/index-store (kv-store (io/file dir "index-store"))})))
+(def xtdb-server-url "http://localhost:4321")
+
+(defn start-xtdb!
+  []
+  (alter-var-root
+      #'xtc/*internal-http-request-fn*
+      (constantly
+        (fn [opts]
+          (juxt.clojars-mirrors.clj-http.v3v12v2.clj-http.client/request opts))))
+
+  (xt/new-api-client xtdb-server-url))
 
 (defn tag [type rec]
   (assoc rec :type type))
+
+(defn unwrap-description
+  [rec]
+  (assoc
+    rec
+    :description (select-keys
+                   (:description rec)
+                   (keys (:description rec)))))
+
+(comment
+
+  (bean {:type "txt/html" :value "x"})
+
+  (h)
+
+  .)
 
 (defn add-stage-id [stage]
   (assoc stage :xt/id (tag :stage {:uri (:uri stage)})))
@@ -92,6 +111,7 @@
                    feed/parse-feed
                    :entries
                    (map prune)
+                   (map unwrap-description)
                    (map (partial tag :stage))
                    (map add-stage-id)
                    (sort-by :uri))
@@ -414,13 +434,13 @@
       (disconnected-action args)
 
       connected-action
-      (with-open [xtdb-node (start-xtdb! "data")]
+      (with-open [xtdb-node (start-xtdb!)]
         (connected-action xtdb-node args))
 
       connected-report-action
       (if (str/blank? (first args))
         (log/info "Usage:" action "<output-dir>")
-        (with-open [xtdb-node (start-xtdb! "data")]
+        (with-open [xtdb-node (start-xtdb!)]
           (connected-report-action xtdb-node args)))
 
       :else
@@ -440,23 +460,23 @@
 
   (build-clerk! "output")
 
-  (with-open [xtdb-node (start-xtdb! "data")]
+  (with-open [xtdb-node (start-xtdb!)]
     (transform-facts! xtdb-node))
 
-  (with-open [xtdb-node (start-xtdb! "data")]
+  (with-open [xtdb-node (start-xtdb!)]
     (get-all-active-facts xtdb-node))
 
-  (with-open [xtdb-node (start-xtdb! "data")]
+  (with-open [xtdb-node (start-xtdb!)]
     (get-all-facts xtdb-node))
 
-  (with-open [xtdb-node (start-xtdb! "data")]
+  (with-open [xtdb-node (start-xtdb!)]
     (load-stage!
      xtdb-node
      "https://webcad.lcwc911.us/Pages/Public/LiveIncidentsFeed.aspx"))
 
   (-main "load")
 
-  (-main "list")
+  (-main "list-active")
 
   (-main "list-all")
 
@@ -466,17 +486,21 @@
 
   (-main)
 
-  (with-open [node (start-xtdb! "data")]
+  (start-xtdb!)
+
+  (def xtdb-node (xt/new-api-client xtdb-server-url))
+
+  (with-open [node (start-xtdb!)]
     (->>
      (xt/q (xt/db node) '{:find [?description]
                           :where [[?e :type :fact]
                                   [?e :description ?description]]})))
 
-  (with-open [node (start-xtdb! "data")]
+  (with-open [node (start-xtdb!)]
     (->>
      (xt/attribute-stats node)))
 
-  (with-open [node (start-xtdb! "data")]
+  (with-open [node (start-xtdb!)]
     (->> node
          get-all-facts
          (map :title)
@@ -484,7 +508,7 @@
          keys
          sort))
 
-  (with-open [node (start-xtdb! "data")]
+  (with-open [node (start-xtdb!)]
     (->> node
          get-all-facts
          (take 10)))
