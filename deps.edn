@@ -2,18 +2,14 @@
  :deps
  {org.clojure/clojure {:mvn/version "1.11.1"}
   org.clojars.gnzh/feedparser-clj {:mvn/version "0.6.1"}
-  tick/tick {:mvn/version "0.5.0"}
+  tick/tick {:mvn/version "0.6.0"}
   com.xtdb/xtdb-http-client {:mvn/version "1.23.1"}
-  com.taoensso/timbre {:mvn/version "6.0.4"}
+  com.taoensso/timbre {:mvn/version "6.1.0"}
   com.fzakaria/slf4j-timbre {:mvn/version "0.3.21"}
   com.magnars/test-with-files {:mvn/version "2021-02-17"}
   hiccup/hiccup {:mvn/version "1.0.5"}
-  io.github.nextjournal/clerk {:mvn/version "0.12.707"}
+  io.github.nextjournal/clerk {:mvn/version "0.13.842"}
  }
 
  :paths ["src" "test" "resources"]
-
- :aliases
- {
-  }
 }
