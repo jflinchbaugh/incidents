@@ -88,7 +88,8 @@
    (xt/q
     (xt/db node)
     '{:find [e]
-      :where [[e :type :stage]]})
+      :where [[e :type :stage]
+               [e :start-date]]})
    (map first)))
 
 (defn clear-all-stage! [node]
@@ -226,13 +227,15 @@
   (->>
    (xt/q (xt/db node) '{:find [(pull ?e [*])]
                         :where [[?e :type :fact]
+                                [?e :start-date]
                                 (not [?e :end-date])]})
    (mapv first)))
 
 (defn get-all-facts [node]
   (->>
    (xt/q (xt/db node) '{:find [(pull ?e [*])]
-                        :where [[?e :type :fact]]})
+                        :where [[?e :type :fact]
+                                [?e :start-date]]})
    (mapv first)))
 
 (defn end [date fact]
