@@ -49,42 +49,42 @@
           :type :stage}))))
   (t/testing "parse all the values and trim"
     (t/is
-      (= {:uri "021cb6cb-b2bc-405a-86d9-73376696bc14"
-          :start-date #inst "2022-08-11T03:42:39.000-00:00"
-          :title "Medical Emergency-Whatever"
-          :incident-type :medical
-          :municipality "Salisbury Township"
-          :streets ["Chestnut St" "McBridge St" "Anomcer Rd"]
-          :units ["Med 293 Chester" "Amb 49-2"]}
+     (= {:uri "021cb6cb-b2bc-405a-86d9-73376696bc14"
+         :start-date #inst "2022-08-11T03:42:39.000-00:00"
+         :title "Medical Emergency-Whatever"
+         :incident-type :medical
+         :municipality "Salisbury Township"
+         :streets ["Chestnut St" "McBridge St" "Anomcer Rd"]
+         :units ["Med 293 Chester" "Amb 49-2"]}
         (parse
-          {:description
-           {:type "text/html"
-            :value
-            " SALISBURY TOWNSHIP ;  CHESTNUT ST & MCBRIDGE ST / ANOMCER RD ;  MED 293 CHESTER <br> AMB 49-2 ; "}
-           :link "http://www.lcwc911.us/lcwc/lcwc/publiccad.asp",
-           :published-date #inst "2022-08-11T03:42:39.000-00:00"
-           :title " MEDICAL EMERGENCY-WHATEVER "
-           :uri "021cb6cb-b2bc-405a-86d9-73376696bc14"
-           :type :stage}))))
+         {:description
+          {:type "text/html"
+           :value
+           " SALISBURY TOWNSHIP ;  CHESTNUT ST & MCBRIDGE ST / ANOMCER RD ;  MED 293 CHESTER <br> AMB 49-2 ; "}
+          :link "http://www.lcwc911.us/lcwc/lcwc/publiccad.asp",
+          :published-date #inst "2022-08-11T03:42:39.000-00:00"
+          :title " MEDICAL EMERGENCY-WHATEVER "
+          :uri "021cb6cb-b2bc-405a-86d9-73376696bc14"
+          :type :stage}))))
   (t/testing "parse county lacks streets"
     (t/is
-      (= {:uri "021cb6cb-b2bc-405a-86d9-73376696bc14"
-          :start-date #inst "2022-08-11T03:42:39.000-00:00"
-          :title "Medical Emergency"
-          :incident-type :medical
-          :municipality "Berks County"
-          :streets []
-          :units ["Med 293 Chester" "Amb 49-2"]}
+     (= {:uri "021cb6cb-b2bc-405a-86d9-73376696bc14"
+         :start-date #inst "2022-08-11T03:42:39.000-00:00"
+         :title "Medical Emergency"
+         :incident-type :medical
+         :municipality "Berks County"
+         :streets []
+         :units ["Med 293 Chester" "Amb 49-2"]}
         (parse
-          {:description
-           {:type "text/html"
-            :value
-            "BERKS COUNTY; MED 293 CHESTER<br> AMB 49-2; "}
-           :link "http://www.lcwc911.us/lcwc/lcwc/publiccad.asp",
-           :published-date #inst "2022-08-11T03:42:39.000-00:00"
-           :title "MEDICAL EMERGENCY"
-           :uri "021cb6cb-b2bc-405a-86d9-73376696bc14"
-           :type :stage})))))
+         {:description
+          {:type "text/html"
+           :value
+           "BERKS COUNTY; MED 293 CHESTER<br> AMB 49-2; "}
+          :link "http://www.lcwc911.us/lcwc/lcwc/publiccad.asp",
+          :published-date #inst "2022-08-11T03:42:39.000-00:00"
+          :title "MEDICAL EMERGENCY"
+          :uri "021cb6cb-b2bc-405a-86d9-73376696bc14"
+          :type :stage})))))
 
 (t/deftest test-tag
   (t/is (= {:thing :value :type :stage} (tag :stage {:thing :value}))))
@@ -124,16 +124,14 @@
            (end now {:key :val :start-date start-time})))))
 
 #_(t/deftest test-start-xtdb!
-  (with-tmp-dir tempdir
-    (with-open [node (start-xtdb! tempdir)]
-      (t/is node))))
+    (with-tmp-dir tempdir
+      (with-open [node (start-xtdb! tempdir)]
+        (t/is node))))
 
 (t/deftest test-everything
   (with-open [node (xt/start-node {})]
     (t/is node "the node is open")
     (t/is (empty? (get-all-stage node)) "staging starts empty")
-
-    (prn (-> "incidents/feed-1.xml" io/resource str))
 
     (load-stage! node (str (io/resource "incidents/feed-1.xml")))
     (t/is (= 3 (count (get-all-stage node))) "staging has data")
@@ -152,8 +150,28 @@
     (t/is (clear-all-stage! node) "evict all of staging")
     (t/is (empty? (get-all-stage node)) "staging is again empty")
 
-    (t/is (= 4 (count (get-all-facts node))) "facts are still there")
-    ))
+    (t/is (= 4 (count (get-all-facts node))) "facts are still there")))
+
+(t/deftest test-keys-db-mem
+  (t/testing "round trip values through keys transformation"
+    (t/is
+     (= {:uri "021cb6cb-b2bc-405a-86d9-73376696bc14"
+         :start-date #inst "2022-08-11T03:42:39.000-00:00"
+         :title "Medical Emergency-Whatever"
+         :incident-type :medical
+         :municipality "Salisbury Township"
+         :streets ["Chestnut St" "McBridge St" "Anomcer Rd"]
+         :units ["Med 293 Chester" "Amb 49-2"]}
+        (->>
+         {:uri "021cb6cb-b2bc-405a-86d9-73376696bc14"
+          :start-date #inst "2022-08-11T03:42:39.000-00:00"
+          :title "Medical Emergency-Whatever"
+          :incident-type :medical
+          :municipality "Salisbury Township"
+          :streets ["Chestnut St" "McBridge St" "Anomcer Rd"]
+          :units ["Med 293 Chester" "Amb 49-2"]}
+         (keys->db "incidents.stage")
+         (keys->mem))))))
 
 (t/deftest test-xtdb
   (with-open [node (xt/start-node {})]
@@ -163,9 +181,9 @@
 
 (t/deftest test-feed
   (let [source (->>
-                    "incidents/feed-1.xml"
-                    (io/resource)
-                    str)
+                "incidents/feed-1.xml"
+                (io/resource)
+                str)
         content (->> source feed/parse-feed)]
     (t/is (str/includes? source "file:/"))
     (t/is (str/includes? source "feed-1.xml"))
@@ -186,23 +204,21 @@
 (t/deftest test-cleanup-fact
   (t/is (nil? (cleanup-fact nil)) "nil -> nil")
   (t/is (=
-          {:title nil
-           :incident-type nil
-           :municipality nil
-           :streets []
-           :units []
-           }
-          (cleanup-fact {}))
-    "empty record gets nils")
+         {:title nil
+          :incident-type nil
+          :municipality nil
+          :streets []
+          :units []}
+         (cleanup-fact {}))
+        "empty record gets nils")
   (t/is (=
-          {:title "The Title-With Hyphen"
-           :incident-type :fire
-           :municipality "A Place"
-           :streets ["A" "B"]
-           :units ["X" "Y"]}
-          (cleanup-fact {:title " the title-with hyphen "
-                    :municipality " a place "
-                    :streets [" a " " b "]
-                    :units [" x " " y "]
-                    }))
-    "cleanup casing and whitespace"))
+         {:title "The Title-With Hyphen"
+          :incident-type :fire
+          :municipality "A Place"
+          :streets ["A" "B"]
+          :units ["X" "Y"]}
+         (cleanup-fact {:title " the title-with hyphen "
+                        :municipality " a place "
+                        :streets [" a " " b "]
+                        :units [" x " " y "]}))
+        "cleanup casing and whitespace"))

@@ -39,14 +39,6 @@
                    (:description rec)
                    (keys (:description rec)))))
 
-(comment
-
-  (bean {:type "txt/html" :value "x"})
-
-  (h)
-
-  .)
-
 (defn add-stage-id [stage]
   (assoc stage :xt/id (tag :stage {:uri (:uri stage)})))
 
@@ -62,12 +54,27 @@
               (coll? v))
              (empty? v)))) rec)))
 
+(defn keys->db [namespace mem-record]
+  (update-keys
+    mem-record
+    (fn [k]
+      (if (#{:xt/id} k) k
+          (keyword (str namespace "/" (name k)))))))
+
+(defn keys->mem [db-record]
+  (update-keys
+    db-record
+    (fn [k]
+      (if (#{:xt/id} k) k
+          (keyword (name k))))))
+
 (defn put-stage! [node stage]
-  (xt/await-tx
-   node
-   (xt/submit-tx
-    node
-    [[::xt/put stage]])))
+  (let [write (keys->db "incidents.stage" stage)]
+    (xt/await-tx
+      node
+      (xt/submit-tx
+        node
+        [[::xt/put write]]))))
 
 (defn incident-type [fact]
   (cond
@@ -80,16 +87,16 @@
 (defn get-all-stage [node]
   (->>
    (xt/q (xt/db node) '{:find [(pull e [*])]
-                        :where [[e :type :stage]]})
-   (mapv first)))
+                        :where [[e :incidents.stage/type :stage]]})
+   (mapv first)
+   (mapv keys->mem)))
 
 (defn get-all-stage-ids [node]
   (->>
    (xt/q
     (xt/db node)
     '{:find [e]
-      :where [[e :type :stage]
-               [e :start-date]]})
+      :where [[e :incidents.stage/type :stage]]})
    (map first)))
 
 (defn clear-all-stage! [node]
@@ -202,41 +209,42 @@
       :units (parse-units units)}
      add-incident-type)))
 
-(defn cleanup-fact [fact]
-  (if
-   (nil? fact) nil
-   (->>
-    {:title (format-title (:title fact))
-     :municipality (format-municipality (:municipality fact))
-     :streets (map format-street (:streets fact))
-     :units (map format-unit (:units fact))}
-    (merge fact)
-    add-incident-type)))
 
 (defn add-fact-id [fact]
   (assoc fact :xt/id (tag :fact {:uri (:uri fact)})))
 
 (defn put-fact! [node fact]
-  (xt/await-tx
-   node
-   (xt/submit-tx
-    node
-    [[::xt/put fact]])))
+  (let [write (keys->db "incidents.fact" fact)]
+    (xt/await-tx
+      node
+      (xt/submit-tx
+        node
+        [[::xt/put write]]))))
 
 (defn get-all-active-facts [node]
   (->>
    (xt/q (xt/db node) '{:find [(pull ?e [*])]
-                        :where [[?e :type :fact]
-                                [?e :start-date]
-                                (not [?e :end-date])]})
-   (mapv first)))
+                        :where [[?e :incidents.fact/type :fact]
+                                [?e :incidents.fact/start-date]
+                                (not [?e :incidents.fact/end-date])]})
+   (mapv first)
+   (mapv keys->mem)))
 
 (defn get-all-facts [node]
   (->>
    (xt/q (xt/db node) '{:find [(pull ?e [*])]
-                        :where [[?e :type :fact]
-                                [?e :start-date]]})
-   (mapv first)))
+                        :where [[?e :incidents.fact/type :fact]
+                                [?e :incidents.fact/start-date]]})
+   (mapv first)
+   (mapv keys->mem)))
+
+(defn get-all-old-facts [node]
+  (->>
+    (xt/q (xt/db node) '{:find [(pull ?e [*])]
+                         :where [[?e :type :fact]
+                                 [?e :start-date]]})
+    (mapv first)
+    (mapv keys->mem)))
 
 (defn end [date fact]
   (assoc fact
@@ -367,11 +375,11 @@
                  (build-clerk! output-dir))))})
 
 (def connected-actions
-  {"cleanup"
+  {"migrate"
    (fn [xtdb-node args]
      (->> xtdb-node
-          get-all-facts
-          (pmap (comp (partial put-fact! xtdb-node) cleanup-fact))
+          get-all-old-facts
+          (pmap (partial put-fact! xtdb-node))
           doall
           (#(log/info "Processed: " (count %)))))
 
@@ -485,19 +493,11 @@
 
   (-main "clear")
 
-  (-main "cleanup")
-
   (-main)
 
   (start-xtdb!)
 
   (def xtdb-node (xt/new-api-client xtdb-server-url))
-
-  (with-open [node (start-xtdb!)]
-    (->>
-     (xt/q (xt/db node) '{:find [?description]
-                          :where [[?e :type :fact]
-                                  [?e :description ?description]]})))
 
   (with-open [node (start-xtdb!)]
     (->>
@@ -514,6 +514,9 @@
   (with-open [node (start-xtdb!)]
     (->> node
          get-all-facts
+         (mapv (partial keys->db "incidents.fact"))
+         (mapv keys->mem)
          (take 10)))
+
 
   .)
