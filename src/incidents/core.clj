@@ -91,6 +91,13 @@
    (mapv first)
    (mapv keys->mem)))
 
+(defn get-all-old-stage [node]
+  (->>
+    (xt/q (xt/db node) '{:find [(pull e [*])]
+                         :where [[e :type :stage]]})
+    (mapv first)
+    (mapv keys->mem)))
+
 (defn get-all-stage-ids [node]
   (->>
    (xt/q
@@ -378,10 +385,15 @@
   {"migrate"
    (fn [xtdb-node args]
      (->> xtdb-node
+       get-all-old-stage
+       (pmap (partial put-stage! xtdb-node))
+       doall
+       (#(log/info "Processed stage: " (count %))))
+     (->> xtdb-node
           get-all-old-facts
           (pmap (partial put-fact! xtdb-node))
           doall
-          (#(log/info "Processed: " (count %)))))
+          (#(log/info "Processed facts: " (count %)))))
 
    "load"
    (fn [xtdb-node args]
