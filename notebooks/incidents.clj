@@ -13,7 +13,7 @@
   "display a simple table in html.
   :head is the sequence of head labels.
   :rows is a sequence of sequences.
-  :limit is the max to display of the rows."
+  :limit is the max to display of the rows. (default 100)"
   [params]
   (clerk/html [:table
                [:thead
