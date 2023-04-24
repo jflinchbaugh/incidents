@@ -289,14 +289,14 @@
   (format-date-part "yyyy-MM-dd" d))
 
 (defn format-streets [streets]
-  (str/join " & " streets))
+  (str/join " & " (or streets [])))
 
 (defn format-map-location
   [municipality streets]
   (str/join
    " "
    [(format-streets streets)
-    (str/replace municipality #" Township| City| Borough" "")
+    municipality
     "PA"]))
 
 (defn map-link

@@ -94,7 +94,10 @@
          (group-by :municipality)
          (map
           (fn [[municipality v]]
-            [municipality (count v)]))
+            [[:a
+              {:target "_blank" :href (str (map-link municipality nil))}
+              municipality]
+             (count v)]))
          (sort-by last)
          reverse)})
 
