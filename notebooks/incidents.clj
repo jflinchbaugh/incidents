@@ -122,10 +122,9 @@
          (map
           (fn [[[municipality & streets] v]]
             [municipality
-             (clerk/html
-              [:a
-               {:target "_blank" :href (str (map-link municipality streets))}
-               (str/join " & " streets)])
+             [:a
+              {:target "_blank" :href (str (map-link municipality streets))}
+              (str/join " & " streets)]
              (count v)]))
          (sort-by last)
          reverse)})
