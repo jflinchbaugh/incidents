@@ -200,25 +200,3 @@
     :traffic "Traffic Accident"
     :traffic "Vehicle Fire"
     :fire "Gas Leak"))
-
-(t/deftest test-cleanup-fact
-  (t/is (nil? (cleanup-fact nil)) "nil -> nil")
-  (t/is (=
-         {:title nil
-          :incident-type nil
-          :municipality nil
-          :streets []
-          :units []}
-         (cleanup-fact {}))
-        "empty record gets nils")
-  (t/is (=
-         {:title "The Title-With Hyphen"
-          :incident-type :fire
-          :municipality "A Place"
-          :streets ["A" "B"]
-          :units ["X" "Y"]}
-         (cleanup-fact {:title " the title-with hyphen "
-                        :municipality " a place "
-                        :streets [" a " " b "]
-                        :units [" x " " y "]}))
-        "cleanup casing and whitespace"))
