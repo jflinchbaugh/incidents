@@ -5,4 +5,6 @@ body {
     -webkit-font-smoothing: antialiased;
     width: 100%;
     background: white;
+    padding-left: 1ex;
+    padding-right: 1ex;
 }
