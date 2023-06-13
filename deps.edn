@@ -5,10 +5,10 @@
   tick/tick {:mvn/version "0.6.2"}
   com.xtdb/xtdb-http-client {:mvn/version "1.23.2"}
   com.taoensso/timbre {:mvn/version "6.1.0"}
-  com.fzakaria/slf4j-timbre {:mvn/version "0.3.21"}
+  com.fzakaria/slf4j-timbre {:mvn/version "0.4.0"}
   com.magnars/test-with-files {:mvn/version "2021-02-17"}
   hiccup/hiccup {:mvn/version "1.0.5"}
-  io.github.nextjournal/clerk {:mvn/version "0.13.842"}
+  io.github.nextjournal/clerk {:mvn/version "0.14.919"}
  }
 
  :paths ["src" "test" "resources"]
