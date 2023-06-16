@@ -20,12 +20,6 @@
 
 (defn start-xtdb!
   []
-  (alter-var-root
-      #'xtc/*internal-http-request-fn*
-      (constantly
-        (fn [opts]
-          (juxt.clojars-mirrors.clj-http.v3v12v2.clj-http.client/request opts))))
-
   (xt/new-api-client xtdb-server-url))
 
 (defn tag [type rec]
