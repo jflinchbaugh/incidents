@@ -13,6 +13,7 @@
     (t/is
      (= {:uri "021cb6cb-b2bc-405a-86d9-73376696bc14"
          :start-date #inst "2022-08-11T03:42:39.000-00:00"
+         :active? true
          :title "Medical Emergency"
          :incident-type :medical
          :municipality "Salisbury Township"
@@ -32,6 +33,7 @@
     (t/is
      (= {:uri "021cb6cb-b2bc-405a-86d9-73376696bc14"
          :start-date #inst "2022-08-11T03:42:39.000-00:00"
+         :active? true
          :title "Medical Emergency"
          :incident-type :medical
          :municipality "Salisbury Township"
@@ -51,6 +53,7 @@
     (t/is
      (= {:uri "021cb6cb-b2bc-405a-86d9-73376696bc14"
          :start-date #inst "2022-08-11T03:42:39.000-00:00"
+         :active? true
          :title "Medical Emergency-Whatever"
          :incident-type :medical
          :municipality "Salisbury Township"
@@ -70,6 +73,7 @@
     (t/is
      (= {:uri "021cb6cb-b2bc-405a-86d9-73376696bc14"
          :start-date #inst "2022-08-11T03:42:39.000-00:00"
+         :active? true
          :title "Medical Emergency"
          :incident-type :medical
          :municipality "Berks County"
@@ -120,6 +124,7 @@
            {:key :val
             :start-date start-time
             :end-date now
+            :active? false
             :duration-minutes 10}
            (end now {:key :val :start-date start-time})))))
 

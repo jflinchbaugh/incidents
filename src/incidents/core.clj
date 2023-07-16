@@ -85,13 +85,6 @@
    (mapv first)
    (mapv keys->mem)))
 
-(defn get-all-old-stage [node]
-  (->>
-    (xt/q (xt/db node) '{:find [(pull e [*])]
-                         :where [[e :type :stage]]})
-    (mapv first)
-    (mapv keys->mem)))
-
 (defn get-all-stage-ids [node]
   (->>
    (xt/q
@@ -204,12 +197,12 @@
     (->>
      {:uri (:uri in)
       :start-date (:published-date in)
+      :active? true
       :title (format-title (:title in))
       :municipality (format-municipality municipality)
       :streets (parse-streets streets)
       :units (parse-units units)}
      add-incident-type)))
-
 
 (defn add-fact-id [fact]
   (assoc fact :xt/id (tag :fact {:uri (:uri fact)})))
@@ -227,7 +220,7 @@
    (xt/q (xt/db node) '{:find [(pull ?e [*])]
                         :where [[?e :incidents.fact/type :fact]
                                 [?e :incidents.fact/start-date]
-                                (not [?e :incidents.fact/end-date])]})
+                                [?e :incidents.fact/active? true]]})
    (mapv first)
    (mapv keys->mem)))
 
@@ -239,17 +232,10 @@
    (mapv first)
    (mapv keys->mem)))
 
-(defn get-all-old-facts [node]
-  (->>
-    (xt/q (xt/db node) '{:find [(pull ?e [*])]
-                         :where [[?e :type :fact]
-                                 [?e :start-date]]})
-    (mapv first)
-    (mapv keys->mem)))
-
 (defn end [date fact]
   (assoc fact
          :end-date date
+         :active? false
          :duration-minutes (tc/minutes (tc/between (:start-date fact) date))))
 
 (defn transform-facts! [node]
@@ -376,20 +362,7 @@
                  (build-clerk! output-dir))))})
 
 (def connected-actions
-  {"migrate"
-   (fn [xtdb-node args]
-     (->> xtdb-node
-       get-all-old-stage
-       (pmap (partial put-stage! xtdb-node))
-       doall
-       (#(log/info "Processed stage: " (count %))))
-     (->> xtdb-node
-          get-all-old-facts
-          (pmap (partial put-fact! xtdb-node))
-          doall
-          (#(log/info "Processed facts: " (count %)))))
-
-   "load"
+  {"load"
    (fn [xtdb-node args]
      (doall
       (concat
