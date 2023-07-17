@@ -74,6 +74,7 @@
   (cond
     (nil? fact) nil
     (nil? (:title fact)) nil
+    (re-matches #".*(Standby).*" (:title fact)) :fire
     (re-matches #".*(EMS|Medical|Transfer).*" (:title fact)) :medical
     (re-matches #".*(Traffic|Vehicle).*" (:title fact)) :traffic
     :else :fire))

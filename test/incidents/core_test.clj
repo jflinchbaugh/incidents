@@ -204,4 +204,5 @@
     :medical "Routine Transfer"
     :traffic "Traffic Accident"
     :traffic "Vehicle Fire"
-    :fire "Gas Leak"))
+    :fire "Gas Leak"
+    :fire "Standby-Transfer"))
