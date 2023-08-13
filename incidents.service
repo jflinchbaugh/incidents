@@ -1,0 +1,14 @@
+[Unit]
+Description=Incidents
+After=xtdb.target
+
+[Service]
+Type=simple
+User=john
+WorkingDirectory=/home/john/incidents
+Environment=JAVA_HOME=/home/john/.sdkman/candidates/java/current
+ExecStart=/bin/bash -l -c "./run.sh server 60 output"
+Restart=always
+
+[Install]
+WantedBy=multi-user.target
