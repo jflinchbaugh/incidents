@@ -423,7 +423,9 @@
                             (tc/now)
                             (tc/of-seconds (* 4 (parse-long seconds)))))
                         (fn [time]
-                          (build-clerk! output-dir)))]
+                          (log/info
+                            (with-out-str
+                              (build-clerk! output-dir)))))]
     (wait-forever)))
 
 (def connected-report-actions
