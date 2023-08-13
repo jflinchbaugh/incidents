@@ -2,6 +2,7 @@
   (:gen-class)
   (:require [feedparser-clj.core :as feed]
             [clojure.java.io :as io]
+            [chime.core :as chime]
             [xtdb.api :as xt]
             [xtdb.remote-api-client :as xtc]
             [clojure.pprint :as pp]
@@ -12,7 +13,8 @@
             [hiccup.page :as p]
             [hiccup.element :as e]
             [hiccup.util :as u]
-            [nextjournal.clerk :as clerk]))
+            [nextjournal.clerk :as clerk]
+            [clojure.test :as t]))
 
 (log/merge-config! {:ns-filter #{"incidents.*"}})
 
@@ -28,10 +30,10 @@
 (defn unwrap-description
   [rec]
   (assoc
-    rec
-    :description (select-keys
-                   (:description rec)
-                   (keys (:description rec)))))
+   rec
+   :description (select-keys
+                 (:description rec)
+                 (keys (:description rec)))))
 
 (defn add-stage-id [stage]
   (assoc stage :xt/id (tag :stage {:uri (:uri stage)})))
@@ -50,25 +52,25 @@
 
 (defn keys->db [namespace mem-record]
   (update-keys
-    mem-record
-    (fn [k]
-      (if (#{:xt/id} k) k
-          (keyword (str namespace "/" (name k)))))))
+   mem-record
+   (fn [k]
+     (if (#{:xt/id} k) k
+         (keyword (str namespace "/" (name k)))))))
 
 (defn keys->mem [db-record]
   (update-keys
-    db-record
-    (fn [k]
-      (if (#{:xt/id} k) k
-          (keyword (name k))))))
+   db-record
+   (fn [k]
+     (if (#{:xt/id} k) k
+         (keyword (name k))))))
 
 (defn put-stage! [node stage]
   (let [write (keys->db "incidents.stage" stage)]
     (xt/await-tx
+     node
+     (xt/submit-tx
       node
-      (xt/submit-tx
-        node
-        [[::xt/put write]]))))
+      [[::xt/put write]]))))
 
 (defn incident-type [fact]
   (cond
@@ -211,10 +213,10 @@
 (defn put-fact! [node fact]
   (let [write (keys->db "incidents.fact" fact)]
     (xt/await-tx
+     node
+     (xt/submit-tx
       node
-      (xt/submit-tx
-        node
-        [[::xt/put write]]))))
+      [[::xt/put write]]))))
 
 (defn get-all-active-facts [node]
   (->>
@@ -394,6 +396,27 @@
    (fn [xtdb-node args]
      (doall (map #(log/info %) (clear-all-stage! xtdb-node))))})
 
+(defn load-and-report [xtdb-node [output-dir]]
+  (doall
+   (concat
+    (load-stage!
+     xtdb-node
+     "https://webcad.lcwc911.us/Pages/Public/LiveIncidentsFeed.aspx")
+    (transform-facts! xtdb-node)))
+  (let [facts (get-all-active-facts xtdb-node)]
+    (report-active facts output-dir)
+    (copy-resources! output-dir)))
+
+(defn server [xtdb-node [seconds output-dir]]
+  (chime/chime-at
+   (chime/periodic-seq (tc/now) (tc/of-seconds (parse-long seconds)))
+   (fn [time]
+     (do
+       (load-and-report xtdb-node [output-dir])
+       (build-clerk! output-dir)
+       (prn time))))
+  (loop [] (Thread/sleep java.lang.Integer/MAX_VALUE) (recur)))
+
 (def connected-report-actions
   {"report-active"
    (fn [xtdb-node args]
@@ -403,17 +426,10 @@
        (copy-resources! output-dir)))
 
    "load-and-report"
-   (fn [xtdb-node args]
-     (doall
-      (concat
-       (load-stage!
-        xtdb-node
-        "https://webcad.lcwc911.us/Pages/Public/LiveIncidentsFeed.aspx")
-       (transform-facts! xtdb-node)))
-     (let [facts (get-all-active-facts xtdb-node)
-           output-dir (first args)]
-       (report-active facts output-dir)
-       (copy-resources! output-dir)))})
+   load-and-report
+
+   "server"
+   server})
 
 (defn -main [& args]
   (let [[action & args] args
@@ -498,5 +514,32 @@
          (mapv keys->mem)
          (take 10)))
 
+  (def scheduler
+    (chime/chime-at
+     (chime/periodic-seq (tc/now) (tc/of-seconds 5))
+     (fn [time] (prn time))))
+
+  (.close scheduler)
+
+  (def load-scheduler
+    (chime/chime-at
+     (chime/periodic-seq (tc/now) (tc/of-seconds 10))
+     (fn [time] (-main "load-and-report" "output"))))
+
+  (.close load-scheduler)
+
+  (with-open [node (start-xtdb!)]
+    (server node [10 "output"]))
+
+  (-main "server" "10" "output")
+
+
+  (with-open [xtdb-node (start-xtdb!)]
+    (let [output-dir "output"
+          time (tc/now)]
+      (do
+        (load-and-report xtdb-node [output-dir])
+        (build-clerk! output-dir)
+        (prn time))))
 
   .)
