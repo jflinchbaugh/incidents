@@ -411,12 +411,20 @@
   (loop [] (Thread/sleep java.lang.Integer/MAX_VALUE) (recur)))
 
 (defn server [xtdb-node [seconds output-dir]]
-  (chime/chime-at
-    (chime/periodic-seq (tc/now) (tc/of-seconds (parse-long seconds)))
-    (fn [time]
-      (load-and-report xtdb-node [output-dir])
-      (build-clerk! output-dir)))
-  (wait-forever))
+  (let [load-schedule (chime/chime-at
+                       (chime/periodic-seq
+                         (tc/now)
+                         (tc/of-seconds (parse-long seconds)))
+                       (fn [time]
+                         (load-and-report xtdb-node [output-dir])))
+        clerk-schedule (chime/chime-at
+                        (rest
+                          (chime/periodic-seq
+                            (tc/now)
+                            (tc/of-seconds (* 4 (parse-long seconds)))))
+                        (fn [time]
+                          (build-clerk! output-dir)))]
+    (wait-forever)))
 
 (def connected-report-actions
   {"report-active"
@@ -533,7 +541,6 @@
     (server node [10 "output"]))
 
   (-main "server" "10" "output")
-
 
   (with-open [xtdb-node (start-xtdb!)]
     (let [output-dir "output"
