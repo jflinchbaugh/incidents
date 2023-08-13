@@ -407,15 +407,16 @@
     (report-active facts output-dir)
     (copy-resources! output-dir)))
 
+(defn wait-forever []
+  (loop [] (Thread/sleep java.lang.Integer/MAX_VALUE) (recur)))
+
 (defn server [xtdb-node [seconds output-dir]]
   (chime/chime-at
-   (chime/periodic-seq (tc/now) (tc/of-seconds (parse-long seconds)))
-   (fn [time]
-     (do
-       (load-and-report xtdb-node [output-dir])
-       (build-clerk! output-dir)
-       (prn time))))
-  (loop [] (Thread/sleep java.lang.Integer/MAX_VALUE) (recur)))
+    (chime/periodic-seq (tc/now) (tc/of-seconds (parse-long seconds)))
+    (fn [time]
+      (load-and-report xtdb-node [output-dir])
+      (build-clerk! output-dir)))
+  (wait-forever))
 
 (def connected-report-actions
   {"report-active"
