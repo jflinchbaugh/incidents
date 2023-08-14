@@ -45,7 +45,7 @@
             :y (map second fact-count)
             :type "bar"}]
     :layout {:title "Incident Count by Date"}
-    :config {:staticPlot true}}))
+    :config {}}))
 
 (clerk/plotly
  (let [fact-count (->>
@@ -59,7 +59,7 @@
             :y (map second fact-count)
             :type "bar"}]
     :layout {:title "Incident Count by Hour"}
-    :config {:staticPlot true}}))
+    :config {}}))
 
 (clerk/plotly
  (let [fact-count (->>
@@ -73,7 +73,7 @@
             :y (map second fact-count)
             :type "bar"}]
     :layout {:title "Incident Count by Day"}
-    :config {:staticPlot true}}))
+    :config {}}))
 
 (clerk/plotly
  (let [muni-count (->>
@@ -88,7 +88,7 @@
             :y (map second muni-count)
             :type "bar"}]
     :layout {:title "Incident Count by Municipality"}
-    :config {:staticPlot true}}))
+    :config {}}))
 
 (my-table
  {:head ["Municipality" "Count"]
@@ -119,7 +119,7 @@
             :y (map second muni-count)
             :type "bar"}]
     :layout {:title "Incident Count by Intersection"}
-    :config {:staticPlot true}}))
+    :config {}}))
 
 (my-table
  {:head ["Municipality" "Intersection" "Incidents"]
