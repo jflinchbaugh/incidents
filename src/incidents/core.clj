@@ -355,9 +355,9 @@
 
 (defn log-lines [s]
   (->>
-    (str/split s #"\n")
-    (map #(log/info %))
-    doall))
+   (str/split s #"\n")
+   (map #(log/info %))
+   doall))
 
 (defn build-clerk! [out-path]
   (->
@@ -428,10 +428,9 @@
                        (fn [time]
                          (load-and-report xtdb-node [output-dir])))
         clerk-schedule (chime/chime-at
-                        (rest
-                         (chime/periodic-seq
-                          (tc/now)
-                          (tc/of-seconds (* 4 (parse-long seconds)))))
+                        (chime/periodic-seq
+                         (tc/now)
+                         (tc/of-seconds (* 4 (parse-long seconds))))
                         (fn [time]
                           (build-clerk! output-dir)))]
     (wait-forever)))
