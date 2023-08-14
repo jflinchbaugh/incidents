@@ -353,9 +353,19 @@
 (defn stop-clerk! []
   (clerk/halt!))
 
+(defn log-lines [s]
+  (->>
+    (str/split s #"\n")
+    (map #(log/info %))
+    doall))
+
 (defn build-clerk! [out-path]
-  (clerk/build! {:paths ["notebooks/incidents.clj"]
-                 :out-path (io/file out-path "clerk")}))
+  (->
+   {:paths ["notebooks/incidents.clj"]
+    :out-path (io/file out-path "clerk")}
+   clerk/build!
+   with-out-str
+   log-lines))
 
 (def disconnected-actions
   {"clerk" (fn [args]
@@ -413,19 +423,17 @@
 (defn server [xtdb-node [seconds output-dir]]
   (let [load-schedule (chime/chime-at
                        (chime/periodic-seq
-                         (tc/now)
-                         (tc/of-seconds (parse-long seconds)))
+                        (tc/now)
+                        (tc/of-seconds (parse-long seconds)))
                        (fn [time]
                          (load-and-report xtdb-node [output-dir])))
         clerk-schedule (chime/chime-at
                         (rest
-                          (chime/periodic-seq
-                            (tc/now)
-                            (tc/of-seconds (* 4 (parse-long seconds)))))
+                         (chime/periodic-seq
+                          (tc/now)
+                          (tc/of-seconds (* 4 (parse-long seconds)))))
                         (fn [time]
-                          (log/info
-                            (with-out-str
-                              (build-clerk! output-dir)))))]
+                          (build-clerk! output-dir)))]
     (wait-forever)))
 
 (def connected-report-actions
@@ -543,13 +551,5 @@
     (server node [10 "output"]))
 
   (-main "server" "10" "output")
-
-  (with-open [xtdb-node (start-xtdb!)]
-    (let [output-dir "output"
-          time (tc/now)]
-      (do
-        (load-and-report xtdb-node [output-dir])
-        (build-clerk! output-dir)
-        (prn time))))
 
   .)
