@@ -354,10 +354,8 @@
   (clerk/halt!))
 
 (defn log-lines [s]
-  (->>
-   (str/split s #"\n")
-   (map #(log/info %))
-   doall))
+  (doseq [line (str/split s #"\n")]
+    (log/info line)))
 
 (defn build-clerk! [out-path]
   (->
