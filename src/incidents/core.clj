@@ -66,13 +66,31 @@
      (if (#{:xt/id} k) k
          (keyword (name k))))))
 
+(defn make-put-tx [data]
+  [[::xt/put data]])
+
 (defn put-stage! [node stage]
-  (let [write (keys->db "incidents.stage" stage)]
-    (xt/await-tx
-     node
-     (xt/submit-tx
-      node
-      [[::xt/put write]]))))
+  (->> stage
+       (keys->db "incidents.stage")
+       make-put-tx
+       (xt/submit-tx node)
+       (xt/await-tx node)))
+
+(defn put-feed! [node feed]
+  (let [now-instant (tc/now)]
+    (->>
+     feed
+     (assoc {:xt/id (str now-instant) :type :feed} :doc)
+     (keys->db "incidents.feed")
+     make-put-tx
+     (xt/submit-tx node)
+     (xt/await-tx node))))
+
+(defn load-feed! [node source]
+  (->>
+   source
+   slurp
+   (put-feed! node)))
 
 (defn incident-type [fact]
   (cond
@@ -218,7 +236,7 @@
      node
      (xt/submit-tx
       node
-      [[::xt/put write]]))))
+      (make-put-tx write)))))
 
 (defn get-all-active-facts [node]
   (->>
@@ -379,6 +397,7 @@
    (fn [xtdb-node args]
      (doall
       (concat
+       (load-feed! xtdb-node feed-url)
        (load-stage! xtdb-node feed-url)
        (transform-facts! xtdb-node))))
 
@@ -407,9 +426,8 @@
 (defn load-and-report [xtdb-node [output-dir]]
   (doall
    (concat
-    (load-stage!
-     xtdb-node
-     feed-url)
+    (load-feed! xtdb-node feed-url)
+    (load-stage! xtdb-node feed-url)
     (transform-facts! xtdb-node)))
   (let [facts (get-all-active-facts xtdb-node)]
     (report-active facts output-dir)
@@ -491,11 +509,6 @@
 
   (with-open [xtdb-node (start-xtdb!)]
     (get-all-facts xtdb-node))
-
-  (with-open [xtdb-node (start-xtdb!)]
-    (load-stage!
-     xtdb-node
-     feed-url))
 
   (-main "load")
 
