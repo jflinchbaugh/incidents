@@ -18,6 +18,8 @@
 
 (log/merge-config! {:ns-filter #{"incidents.*"}})
 
+(def feed-url "https://webcad.lcwc911.us/Pages/Public/LiveIncidentsFeed.aspx")
+
 (def xtdb-server-url "http://localhost:4321")
 
 (defn start-xtdb!
@@ -377,9 +379,7 @@
    (fn [xtdb-node args]
      (doall
       (concat
-       (load-stage!
-        xtdb-node
-        "https://webcad.lcwc911.us/Pages/Public/LiveIncidentsFeed.aspx")
+       (load-stage! xtdb-node feed-url)
        (transform-facts! xtdb-node))))
 
    "list-active"
@@ -409,7 +409,7 @@
    (concat
     (load-stage!
      xtdb-node
-     "https://webcad.lcwc911.us/Pages/Public/LiveIncidentsFeed.aspx")
+     feed-url)
     (transform-facts! xtdb-node)))
   (let [facts (get-all-active-facts xtdb-node)]
     (report-active facts output-dir)
@@ -495,7 +495,7 @@
   (with-open [xtdb-node (start-xtdb!)]
     (load-stage!
      xtdb-node
-     "https://webcad.lcwc911.us/Pages/Public/LiveIncidentsFeed.aspx"))
+     feed-url))
 
   (-main "load")
 
