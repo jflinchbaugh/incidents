@@ -143,6 +143,9 @@
     (t/is node "the node is open")
     (t/is (empty? (get-all-stage node)) "staging starts empty")
 
+    (load-feed! node (str (io/resource "incidents/feed-1.xml")))
+    (t/is (= 1 (count (get-feed-since node 0))) "feeds has a doc")
+
     (load-stage! node (str (io/resource "incidents/feed-1.xml")))
     (t/is (= 3 (count (get-all-stage node))) "staging has data")
 
@@ -150,6 +153,9 @@
 
     (transform-facts! node)
     (t/is (= 3 (count (get-all-facts node))) "facts are loaded from staging")
+
+    (load-feed! node (str (io/resource "incidents/feed-2.xml")))
+    (t/is (= 2 (count (get-feed-since node 0))) "feeds has 2 docs")
 
     (load-stage! node (str (io/resource "incidents/feed-2.xml")))
     (t/is (= 3 (count (get-all-stage node))) "staging has data")

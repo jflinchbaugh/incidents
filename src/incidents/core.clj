@@ -88,7 +88,8 @@
      feed
      (assoc {:date (str now-instant)
              :unix-time (unix-time now-instant)}
-       :doc)
+            :doc)
+     (tag :feed)
      (add-feed-id)
      (keys->db "incidents.feed")
      make-put-tx
@@ -100,6 +101,20 @@
    source
    slurp
    (put-feed! node)))
+
+(defn get-feed-since [node last-time]
+  (->>
+   (xt/q
+    (xt/db node)
+    '{:find [(pull ?e [*]) ?unix-time]
+      :where [[?e :incidents.feed/type :feed]
+              [?e :incidents.feed/unix-time ?unix-time]
+              [(< ?last-time ?unix-time)]]
+      :order-by [[?unix-time :asc]]
+      :in [?last-time]}
+    last-time)
+   (mapv first)
+   (mapv keys->mem)))
 
 (defn incident-type [fact]
   (cond
@@ -519,15 +534,6 @@
   (with-open [xtdb-node (start-xtdb!)]
     (get-all-facts xtdb-node))
 
-  (-main "load")
-
-  (-main "list-active")
-
-  (-main "list-all")
-
-  (-main "clear")
-
-  (-main)
 
   (start-xtdb!)
 
@@ -569,8 +575,12 @@
   (with-open [node (start-xtdb!)]
     (server node [10 "output"]))
 
-  (-main "server" "10" "output")
-
   (tc/instant (tc/millis (tc/between (tc/epoch) (tc/now))))
+
+  (with-open [node (start-xtdb!)]
+    (load-feed! node feed-url))
+
+  (with-open [node (start-xtdb!)]
+    (get-feed-since node 0))
 
   .)
