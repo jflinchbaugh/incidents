@@ -76,11 +76,20 @@
        (xt/submit-tx node)
        (xt/await-tx node)))
 
+(defn add-feed-id [feed]
+  (assoc feed :xt/id (tag :feed {:date (:date feed)})))
+
+(defn unix-time [inst]
+  (tc/millis (tc/between (tc/epoch) inst)))
+
 (defn put-feed! [node feed]
   (let [now-instant (tc/now)]
     (->>
      feed
-     (assoc {:xt/id (str now-instant) :type :feed} :doc)
+     (assoc {:date (str now-instant)
+             :unix-time (unix-time now-instant)}
+       :doc)
+     (add-feed-id)
      (keys->db "incidents.feed")
      make-put-tx
      (xt/submit-tx node)
@@ -561,5 +570,7 @@
     (server node [10 "output"]))
 
   (-main "server" "10" "output")
+
+  (tc/instant (tc/millis (tc/between (tc/epoch) (tc/now))))
 
   .)
