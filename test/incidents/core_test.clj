@@ -103,6 +103,11 @@
          {:thing :value :uri "uri" :xt/id {:type :fact :uri "uri"}}
          (add-fact-id {:thing :value :uri "uri"}))))
 
+(t/deftest test-add-feed-id
+  (t/is (=
+          {:thing :value :uri "uri" :date "time" :xt/id {:type :feed :date "time"}}
+          (add-feed-id {:thing :value :uri "uri" :date "time"}))))
+
 (t/deftest test-prune
   (t/is (=
          {:thing :value
@@ -184,7 +189,7 @@
     (t/is (put-stage! node (tag :stage (add-stage-id {:uri 1 :thing :other}))))
     (t/is (get-all-stage node))))
 
-(t/deftest test-feed
+(t/deftest test-parse-feed
   (let [source (->>
                 "incidents/feed-1.xml"
                 (io/resource)
