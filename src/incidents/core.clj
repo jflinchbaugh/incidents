@@ -460,17 +460,17 @@
 (defn wait-forever []
   (loop [] (Thread/sleep java.lang.Integer/MAX_VALUE) (recur)))
 
-(defn server [xtdb-node [seconds output-dir]]
+(defn server [xtdb-node [ingest-seconds clerk-seconds output-dir]]
   (let [load-schedule (chime/chime-at
                        (chime/periodic-seq
                         (tc/now)
-                        (tc/of-seconds (parse-long seconds)))
+                        (tc/of-seconds (parse-long ingest-seconds)))
                        (fn [time]
                          (load-and-report xtdb-node [output-dir])))
         clerk-schedule (chime/chime-at
                         (chime/periodic-seq
                          (tc/now)
-                         (tc/of-seconds (* 4 (parse-long seconds))))
+                         (tc/of-seconds (parse-long clerk-seconds)))
                         (fn [time]
                           (build-clerk! output-dir)))]
     (wait-forever)))
@@ -573,7 +573,7 @@
   (.close load-scheduler)
 
   (with-open [node (start-xtdb!)]
-    (server node [10 "output"]))
+    (server node [10 60 "output"]))
 
   (tc/instant (tc/millis (tc/between (tc/epoch) (tc/now))))
 

@@ -7,7 +7,7 @@ Type=simple
 User=john
 WorkingDirectory=/home/john/incidents
 Environment=JAVA_HOME=/home/john/.sdkman/candidates/java/current
-ExecStart=/bin/bash -l -c "./run.sh server 300 output 2>&1 >> load.log"
+ExecStart=/bin/bash -l -c "./run.sh server 300 1800 output 2>&1 >> load.log"
 Restart=always
 
 [Install]
