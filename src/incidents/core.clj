@@ -461,6 +461,7 @@
   (loop [] (Thread/sleep java.lang.Integer/MAX_VALUE) (recur)))
 
 (defn server [xtdb-node [ingest-seconds clerk-seconds output-dir]]
+  (log/info "Starting server.")
   (let [load-schedule (chime/chime-at
                        (chime/periodic-seq
                         (tc/now)
