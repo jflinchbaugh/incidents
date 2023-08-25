@@ -172,7 +172,6 @@
 (defn load-stage! [node source]
   (let [feed-time (unix-time (tc/now))
         _ (put-last-feed-time! node feed-time)
-        _ (log/info (str "last feed time: " (get-last-feed-time node)))
         new-stage (->>
                    source
                    feed/parse-feed
