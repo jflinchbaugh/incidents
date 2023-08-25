@@ -154,8 +154,26 @@
    (xt/submit-tx node)
    (xt/await-tx node)))
 
+(defn put-last-feed-time! [node feed-time]
+  (->>
+    [[::xt/put {:xt/id :last-feed-time :feed-time feed-time}]]
+    (xt/submit-tx node)
+    (xt/await-tx node)))
+
+(defn get-last-feed-time [node]
+  (->>
+    (xt/q
+      (xt/db node)
+      '{:find [?last-feed-time]
+        :where [[?e :xt/id :last-feed-time]
+                [?e :feed-time ?last-feed-time]]})
+    ffirst))
+
 (defn load-stage! [node source]
-  (let [new-stage (->>
+  (let [feed-time (unix-time (tc/now))
+        _ (put-last-feed-time! node feed-time)
+        _ (log/info (str "last feed time: " (get-last-feed-time node)))
+        new-stage (->>
                    source
                    feed/parse-feed
                    :entries
