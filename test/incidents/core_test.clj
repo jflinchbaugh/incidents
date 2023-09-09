@@ -129,27 +129,26 @@
       (with-open [node (start-xtdb! tempdir)]
         (t/is node))))
 
-#_(t/deftest test-everything
+(t/deftest test-everything
   (with-open [node (xt/start-node {})]
     (t/is node "the node is open")
 
-    (load-feed! node (io/input-stream (io/resource "incidents/feed-1.xml")))
+    (load-feed! node (io/resource "incidents/feed-1.xml"))
     (t/is
       (= 1 (count (get-feeds-since node (get-last-feed-time node))))
       "feeds has a doc")
 
     (t/is (empty? (get-all-facts node)) "facts start empty")
 
-    (transform-facts! node)
+    (t/is (= 4 (count (first (transform-facts! node)))) "fact transactions")
     (t/is (= 3 (count (get-all-facts node))) "facts are loaded from staging")
 
     (load-feed! node (str (io/resource "incidents/feed-2.xml")))
-    (t/is (= 2 (count (get-feeds-since node 0))) "feeds has 2 docs")
+    (t/is (= 1 (count (get-feeds-since node (get-last-feed-time node))))
+      "feeds has 1 new doc")
 
-    (transform-facts! node)
-    (t/is (= 4 (count (get-all-facts node))) "facts are loaded from staging")
-
-    (t/is (= 4 (count (get-all-facts node))) "facts are still there")))
+    (t/is (= 1 (count (transform-facts! node))) "fact transactions")
+    (t/is (= 4 (count (get-all-facts node))) "facts are loaded from staging")))
 
 (t/deftest test-keys-db-mem
   (t/testing "round trip values through keys transformation"
