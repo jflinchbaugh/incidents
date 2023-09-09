@@ -239,8 +239,7 @@
   (let [last-feed-time (get-last-feed-time node)
         feeds (get-feeds-since node last-feed-time)]
     (for [feed feeds]
-      (let [_ (log/info "feed" feed)
-            new-facts (->>
+      (let [new-facts (->>
                        feed
                        :doc
                        java.io.StringBufferInputStream.
