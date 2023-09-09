@@ -265,8 +265,7 @@
          (concat
           (->>
            ended-facts
-              ;; TODO use the feed date
-           (map (partial end (tc/inst)))
+           (map (partial end (tc/inst (:date feed))))
            (map (partial put-fact! node)))
           (->>
            updated-facts
@@ -463,6 +462,5 @@
   (shutdown-agents))
 
 (comment
-
 
   .)
