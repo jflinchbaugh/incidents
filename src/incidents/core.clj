@@ -1,6 +1,6 @@
 (ns incidents.core
   (:gen-class)
-  (:require [feedparser-clj.core :as feed]
+  (:require [feedparser-clj.core :as fp]
             [clojure.java.io :as io]
             [chime.core :as chime]
             [xtdb.api :as xt]
@@ -37,9 +37,6 @@
                  (:description rec)
                  (keys (:description rec)))))
 
-(defn add-stage-id [stage]
-  (assoc stage :xt/id (tag :stage {:uri (:uri stage)})))
-
 (defn prune [rec]
   (into {}
         (remove
@@ -69,13 +66,6 @@
 (defn make-put-tx [data]
   [[::xt/put data]])
 
-(defn put-stage! [node stage]
-  (->> stage
-       (keys->db "incidents.stage")
-       make-put-tx
-       (xt/submit-tx node)
-       (xt/await-tx node)))
-
 (defn add-feed-id [feed]
   (assoc feed :xt/id (tag :feed {:date (:date feed)})))
 
@@ -102,7 +92,7 @@
    slurp
    (put-feed! node)))
 
-(defn get-feed-since [node last-time]
+(defn get-feeds-since [node last-time]
   (->>
    (xt/q
     (xt/db node)
@@ -125,80 +115,22 @@
     (re-matches #".*(Traffic|Vehicle).*" (:title fact)) :traffic
     :else :fire))
 
-(defn get-all-stage [node]
-  (->>
-   (xt/q (xt/db node) '{:find [(pull e [*])]
-                        :where [[e :incidents.stage/type :stage]]})
-   (mapv first)
-   (mapv keys->mem)))
-
-(defn get-all-stage-ids [node]
-  (->>
-   (xt/q
-    (xt/db node)
-    '{:find [e]
-      :where [[e :incidents.stage/type :stage]]})
-   (map first)))
-
-(defn clear-all-stage! [node]
-  (->>
-   (get-all-stage-ids node)
-   (mapv (fn [i] [::xt/evict i]))
-   (xt/submit-tx node)
-   (xt/await-tx node)))
-
-(defn delete-stage! [node ids]
-  (->>
-   ids
-   (mapv (fn [i] [::xt/delete i]))
-   (xt/submit-tx node)
-   (xt/await-tx node)))
-
 (defn put-last-feed-time! [node feed-time]
   (->>
-    [[::xt/put {:xt/id :last-feed-time :feed-time feed-time}]]
-    (xt/submit-tx node)
-    (xt/await-tx node)))
+   [[::xt/put {:xt/id :last-feed-time :feed-time feed-time}]]
+   (xt/submit-tx node)
+   (xt/await-tx node)))
 
 (defn get-last-feed-time [node]
-  (->>
+  (or
+   (->>
     (xt/q
-      (xt/db node)
-      '{:find [?last-feed-time]
-        :where [[?e :xt/id :last-feed-time]
-                [?e :feed-time ?last-feed-time]]})
-    ffirst))
-
-(defn load-stage! [node source]
-  (let [feed-time (unix-time (tc/now))
-        _ (put-last-feed-time! node feed-time)
-        new-stage (->>
-                   source
-                   feed/parse-feed
-                   :entries
-                   (map prune)
-                   (map unwrap-description)
-                   (map (partial tag :stage))
-                   (map add-stage-id)
-                   (sort-by :uri))
-        new-stage-ids (set (map :xt/id new-stage))
-        existing-stage (sort-by :uri (get-all-stage node))
-        existing-stage-ids (map :xt/id existing-stage)
-        ids-to-remove (remove new-stage-ids existing-stage-ids)
-        removals (delete-stage! node ids-to-remove)
-        updates (remove (set existing-stage) new-stage)
-        _ (log/info
-           (str
-            "Found "
-            (count new-stage)
-            ", Updated "
-            (count updates)
-            ", Removed "
-            (count ids-to-remove)))]
-    (->>
-     updates
-     (map (partial put-stage! node))
-     doall)))
+     (xt/db node)
+     '{:find [?last-feed-time]
+       :where [[?e :xt/id :last-feed-time]
+               [?e :feed-time ?last-feed-time]]})
+    ffirst)
+   0))
 
 (defn override [s]
   (get
@@ -302,26 +234,47 @@
          :active? false
          :duration-minutes (tc/minutes (tc/between (:start-date fact) date))))
 
-(defn transform-facts! [node]
-  (let [active-facts (get-all-active-facts node)
-        new-facts (->>
-                   node
-                   get-all-stage
-                   (map parse)
-                   (map (partial tag :fact))
-                   (map add-fact-id))
-        updated-facts (remove (set active-facts) new-facts)
-        ended-facts (remove (set new-facts) active-facts)]
+(defn transform-facts!
+  [node]
+  (let [last-feed-time (get-last-feed-time node)
+        feeds (get-feeds-since node last-feed-time)]
+    (for [feed feeds]
+      (let [_ (log/info "feed" feed)
+            new-facts (->>
+                       feed
+                       :doc
+                       java.io.StringBufferInputStream.
+                       fp/parse-feed
+                       :entries
+                       (map prune)
+                       (map unwrap-description)
+                       (sort-by :uri)
+                       (map parse)
+                       (map (partial tag :fact))
+                       (map add-fact-id))
+            active-facts (get-all-active-facts node)
+            updated-facts (remove (set active-facts) new-facts)
+            ended-facts (remove (set new-facts) active-facts)
+            _ (log/info
+               "Updating"
+               (count updated-facts)
+               "Ending"
+               (count ended-facts))]
+        (doall
+         (concat
+          (->>
+           ended-facts
+              ;; TODO use the feed date
+           (map (partial end (tc/inst)))
+           (map (partial put-fact! node)))
+          (->>
+           updated-facts
+           (map (partial put-fact! node)))
+          [(put-last-feed-time! node (:unix-time feed))]))))))
 
-    (doall
-     (concat
-      (->>
-       ended-facts
-       (map (partial end (tc/inst)))
-       (map (partial put-fact! node)))
-      (->>
-       updated-facts
-       (map (partial put-fact! node)))))))
+(comment
+  (with-open [node (start-xtdb!)]
+    (transform-facts! node)))
 
 (defn format-date-part [fmt d]
   (tc/format fmt (tc/date-time d)))
@@ -439,36 +392,12 @@
      (doall
       (concat
        (load-feed! xtdb-node feed-url)
-       (load-stage! xtdb-node feed-url)
-       (transform-facts! xtdb-node))))
-
-   "list-active"
-   (fn [xtdb-node args]
-     (let [stage (get-all-stage xtdb-node)
-           facts (get-all-active-facts xtdb-node)]
-       (->> stage (map pp/pprint) doall)
-       (log/info "Count of Stage:" (count stage))
-       (->> facts (map pp/pprint) doall)
-       (log/info "Count of Facts:" (count facts))))
-
-   "list-all"
-   (fn [xtdb-node args]
-     (let [stage (get-all-stage xtdb-node)
-           facts (get-all-facts xtdb-node)]
-       (doall (map prn stage))
-       (log/info "Count of Stage:" (count stage))
-       (doall (map prn facts))
-       (log/info "Count of Facts:" (count facts))))
-
-   "clear"
-   (fn [xtdb-node args]
-     (doall (map #(log/info %) (clear-all-stage! xtdb-node))))})
+       (transform-facts! xtdb-node))))})
 
 (defn load-and-report [xtdb-node [output-dir]]
   (doall
    (concat
     (load-feed! xtdb-node feed-url)
-    (load-stage! xtdb-node feed-url)
     (transform-facts! xtdb-node)))
   (let [facts (get-all-active-facts xtdb-node)]
     (report-active facts output-dir)
@@ -552,9 +481,6 @@
   (with-open [xtdb-node (start-xtdb!)]
     (get-all-facts xtdb-node))
 
-
-  (start-xtdb!)
-
   (def xtdb-node (xt/new-api-client xtdb-server-url))
 
   (with-open [node (start-xtdb!)]
@@ -599,6 +525,21 @@
     (load-feed! node feed-url))
 
   (with-open [node (start-xtdb!)]
-    (get-feed-since node 0))
+    (->>
+     (get-feed-since node 0)
+     (map
+      (fn [feed]
+        (->>
+         feed
+         :doc
+         java.io.StringBufferInputStream.
+         fp/parse-feed
+         :entries
+         (map prune)
+         (map unwrap-description)
+         (sort-by :uri)
+         (map parse)
+         (map (partial tag :fact))
+         (map add-fact-id))))))
 
   .)
