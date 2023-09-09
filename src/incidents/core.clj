@@ -255,6 +255,8 @@
             updated-facts (remove (set active-facts) new-facts)
             ended-facts (remove (set new-facts) active-facts)
             _ (log/info
+               "Found"
+               (count active-facts)
                "Updating"
                (count updated-facts)
                "Ending"
