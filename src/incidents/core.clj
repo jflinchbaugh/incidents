@@ -273,10 +273,6 @@
            (map (partial put-fact! node)))
           [(put-last-feed-time! node (:unix-time feed))]))))))
 
-(comment
-  (with-open [node (start-xtdb!)]
-    (transform-facts! node)))
-
 (defn format-date-part [fmt d]
   (tc/format fmt (tc/date-time d)))
 
@@ -467,80 +463,6 @@
   (shutdown-agents))
 
 (comment
-  (start-clerk!)
 
-  (stop-clerk!)
-
-  (build-clerk! "output")
-
-  (with-open [xtdb-node (start-xtdb!)]
-    (transform-facts! xtdb-node))
-
-  (with-open [xtdb-node (start-xtdb!)]
-    (get-all-active-facts xtdb-node))
-
-  (with-open [xtdb-node (start-xtdb!)]
-    (get-all-facts xtdb-node))
-
-  (def xtdb-node (xt/new-api-client xtdb-server-url))
-
-  (with-open [node (start-xtdb!)]
-    (->>
-     (xt/attribute-stats node)))
-
-  (with-open [node (start-xtdb!)]
-    (->> node
-         get-all-facts
-         (map :title)
-         (group-by identity)
-         keys
-         sort))
-
-  (with-open [node (start-xtdb!)]
-    (->> node
-         get-all-facts
-         (mapv (partial keys->db "incidents.fact"))
-         (mapv keys->mem)
-         (take 10)))
-
-  (def scheduler
-    (chime/chime-at
-     (chime/periodic-seq (tc/now) (tc/of-seconds 5))
-     (fn [time] (prn time))))
-
-  (.close scheduler)
-
-  (def load-scheduler
-    (chime/chime-at
-     (chime/periodic-seq (tc/now) (tc/of-seconds 10))
-     (fn [time] (-main "load-and-report" "output"))))
-
-  (.close load-scheduler)
-
-  (with-open [node (start-xtdb!)]
-    (server node [10 60 "output"]))
-
-  (tc/instant (tc/millis (tc/between (tc/epoch) (tc/now))))
-
-  (with-open [node (start-xtdb!)]
-    (load-feed! node feed-url))
-
-  (with-open [node (start-xtdb!)]
-    (->>
-     (get-feed-since node 0)
-     (map
-      (fn [feed]
-        (->>
-         feed
-         :doc
-         java.io.StringBufferInputStream.
-         fp/parse-feed
-         :entries
-         (map prune)
-         (map unwrap-description)
-         (sort-by :uri)
-         (map parse)
-         (map (partial tag :fact))
-         (map add-fact-id))))))
 
   .)
