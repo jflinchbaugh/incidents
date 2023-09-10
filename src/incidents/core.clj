@@ -459,6 +459,24 @@
         (str/join "|")))))
   (shutdown-agents))
 
+(defn delete-all-facts! [node]
+  (let [ids (map first
+              (xt/q (xt/db node) '{:find [?e]
+                                   :where [[?e :incidents.fact/type :fact]]}))]
+    (->>
+      ids
+      (mapv #(-> [::xt/delete %]))
+      (xt/submit-tx node))))
+
 (comment
+
+  (with-open [node (start-xtdb!)]
+    (delete-all-facts! node)
+    )
+
+  (build-clerk! "output")
+
+  (with-open [node (start-xtdb!)]
+    (put-last-feed-time! node 0))
 
   .)
