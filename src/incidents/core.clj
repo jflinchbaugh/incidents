@@ -258,7 +258,9 @@
                "Updating"
                (count updated-facts)
                "Ending"
-               (count ended-facts))]
+               (count ended-facts)
+               "for"
+               (:date feed))]
         (doall
          (concat
           (->>
