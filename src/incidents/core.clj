@@ -4,17 +4,13 @@
             [clojure.java.io :as io]
             [chime.core :as chime]
             [xtdb.api :as xt]
-            [xtdb.remote-api-client :as xtc]
-            [clojure.pprint :as pp]
             [tick.core :as tc]
             [taoensso.timbre :as log]
             [clojure.string :as str]
-            [hiccup.core :as h]
             [hiccup.page :as p]
             [hiccup.element :as e]
             [hiccup.util :as u]
-            [nextjournal.clerk :as clerk]
-            [clojure.test :as t]))
+            [nextjournal.clerk :as clerk]))
 
 (log/merge-config! {:ns-filter #{"incidents.*"}})
 
@@ -40,7 +36,7 @@
 (defn prune [rec]
   (into {}
         (remove
-         (fn [[k v]]
+         (fn [[_ v]]
            (or
             (nil? v)
             (and
@@ -384,7 +380,7 @@
 
 (def connected-actions
   {"load"
-   (fn [xtdb-node args]
+   (fn [xtdb-node _]
      (doall
       (concat
        (load-feed! xtdb-node feed-url)
