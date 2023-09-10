@@ -113,7 +113,9 @@
 
 (defn put-last-feed-time! [node feed-time]
   (->>
-   [[::xt/put {:xt/id :last-feed-time :feed-time feed-time}]]
+   [[::xt/put
+     {:xt/id :incidents.feed/last-feed-time
+      :incidents.feed/feed-time feed-time}]]
    (xt/submit-tx node)
    (xt/await-tx node)))
 
@@ -123,8 +125,8 @@
     (xt/q
      (xt/db node)
      '{:find [?last-feed-time]
-       :where [[?e :xt/id :last-feed-time]
-               [?e :feed-time ?last-feed-time]]})
+       :where [[?e :xt/id :incidents.feed/last-feed-time]
+               [?e :incidents.feed/feed-time ?last-feed-time]]})
     ffirst)
    0))
 
