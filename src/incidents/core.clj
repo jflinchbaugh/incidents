@@ -472,6 +472,8 @@
 
 (comment
 
+  (start-clerk!)
+
   (with-open [node (start-xtdb!)]
     (delete-all-facts! node)
     )

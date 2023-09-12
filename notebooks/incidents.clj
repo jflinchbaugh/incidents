@@ -33,6 +33,21 @@
                       (sort-by :duration-minutes)
                       reverse)))
 
+(my-table
+  {:head ["Date" "Duration" "Title" "Municipality" "Intersection"]
+   :limit 100
+   :rows (->>
+     incidents
+     (sort-by :start-date)
+     reverse
+     (map (fn [i] [(format-date-time (:start-date i))
+                   (or (:duration-minutes i) "-")
+                   (:title i)
+                   (:municipality i)
+                   [:a {:target "_blank"
+                        :href (str (map-link (:municipality i) (:streets i)))}
+                    (str/join " & " (:streets i))]])))})
+
 (clerk/plotly
  (let [fact-count (->>
                    incidents
