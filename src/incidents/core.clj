@@ -60,19 +60,21 @@
 (defn unix-time [inst]
   (tc/millis (tc/between (tc/epoch) inst)))
 
+(defn make-feed-rec [instant rec]
+  (assoc {:date (str instant)
+          :unix-time (unix-time instant)}
+    :doc rec))
+
 (defn put-feed! [node feed]
-  (let [now-instant (tc/now)]
     (->>
      feed
-     (assoc {:date (str now-instant)
-             :unix-time (unix-time now-instant)}
-            :doc)
+     (make-feed-rec (tc/now))
      (tag :feed)
-     (add-feed-id)
+     add-feed-id
      (keys->db "incidents.feed")
      make-put-tx
      (xt/submit-tx node)
-     (xt/await-tx node))))
+     (xt/await-tx node)))
 
 (defn load-feed! [node source]
   (->>
