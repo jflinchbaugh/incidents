@@ -25,14 +25,6 @@
 (defn tag [type rec]
   (assoc rec :type type))
 
-(defn unwrap-description
-  [rec]
-  (assoc
-   rec
-   :description (select-keys
-                 (:description rec)
-                 (keys (:description rec)))))
-
 (defn prune [rec]
   (into {}
         (remove
@@ -244,7 +236,6 @@
                        fp/parse-feed
                        :entries
                        (map prune)
-                       (map unwrap-description)
                        (sort-by :uri)
                        (map parse)
                        (map (partial tag :fact))
