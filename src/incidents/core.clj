@@ -371,7 +371,7 @@
                       {:target "_blank"}
                       "clerk/index.html"
                       "Clerk")
-                     (reload-js 10000 0)])))))
+                     (reload-js 60000 0)])))))
 
 (defn copy-file! [src dest]
   (io/copy (io/input-stream (io/resource src)) (io/file dest)))
