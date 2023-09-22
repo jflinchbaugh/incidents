@@ -307,6 +307,35 @@
 (defn format-incident-type [type]
   (str/capitalize (name type)))
 
+(defn reload-js [period delay]
+  [:script
+   (->
+     "const scheduleReload = function(period, delay) {
+        const now = new Date().getTime();
+        const nextMinute = Math.trunc((now + period) / period) * period;
+        const waitTime = nextMinute - now + delay;
+        console.log(location.href);
+        setTimeout(
+          function() {
+            var request = new XMLHttpRequest();
+            request.onreadystatechange = function() {
+              if (this.readyState == this.HEADERS_RECEIVED) {
+                location.reload();
+              }
+            };
+            request.open('GET', location.href, true);
+            request.responseType = 'text/plain';
+            request.send();
+            scheduleReload(period, delay);
+          },
+          waitTime);
+     };
+     scheduleReload(${period}, ${delay});"
+     (str/replace "${period}" (str period))
+     (str/replace "${delay}" (str delay))
+     )]
+ )
+
 (defn report-active [facts output-dir]
   (let [title "Active Incidents"
         out-file (io/file output-dir "index.html")]
@@ -341,7 +370,8 @@
                      (e/link-to
                       {:target "_blank"}
                       "clerk/index.html"
-                      "Clerk")])))))
+                      "Clerk")
+                     (reload-js 10000 0)])))))
 
 (defn copy-file! [src dest]
   (io/copy (io/input-stream (io/resource src)) (io/file dest)))
