@@ -308,33 +308,11 @@
   (str/capitalize (name type)))
 
 (defn reload-js [period delay]
-  [:script
-   (->
-     "const scheduleReload = function(period, delay) {
-        const now = new Date().getTime();
-        const nextMinute = Math.trunc((now + period) / period) * period;
-        const waitTime = nextMinute - now + delay;
-        console.log(location.href);
-        setTimeout(
-          function() {
-            var request = new XMLHttpRequest();
-            request.onreadystatechange = function() {
-              if (this.readyState == this.HEADERS_RECEIVED) {
-                location.reload();
-              }
-            };
-            request.open('GET', location.href, true);
-            request.responseType = 'text/plain';
-            request.send();
-            scheduleReload(period, delay);
-          },
-          waitTime);
-     };
-     scheduleReload(${period}, ${delay});"
-     (str/replace "${period}" (str period))
-     (str/replace "${delay}" (str delay))
-     )]
- )
+   [:script
+    (->
+      "scheduleReload(${period}, ${delay});"
+      (str/replace "${period}" (str period))
+      (str/replace "${delay}" (str delay)))])
 
 (defn report-active [facts output-dir]
   (let [title "Active Incidents"
@@ -371,6 +349,7 @@
                       {:target "_blank"}
                       "clerk/index.html"
                       "Clerk")
+                     (p/include-js "reloader.js")
                      (reload-js 60000 0)])))))
 
 (defn copy-file! [src dest]
@@ -378,7 +357,8 @@
 
 (defn copy-resources! [dest]
   (copy-file! "web/htaccess" (str dest "/.htaccess"))
-  (copy-file! "web/style.css" (str dest "/style.css")))
+  (copy-file! "web/style.css" (str dest "/style.css"))
+  (copy-file! "web/reloader.js" (str dest "/reloader.js")))
 
 (defn start-clerk! []
   (clerk/serve! {:browse? true :watch-paths ["notebooks"]}))
