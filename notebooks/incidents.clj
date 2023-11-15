@@ -9,23 +9,6 @@
    [clojure.string :as str]))
 
 ^{:nextjournal.clerk/visibility {:code :hide :result :hide}}
-(defn my-table
-  "display a simple table in html.
-  :head is the sequence of head labels.
-  :rows is a sequence of sequences.
-  :limit is the max to display of the rows. (default 100)"
-  [params]
-  (clerk/html [:table
-               [:thead
-                [:tr
-                 (for [h (:head params)] [:th h])]]
-               [:tbody
-                (for [r (take (or (:limit params) 100) (:rows params))]
-                  [:tr
-                   (for [c r]
-                     [:td c])])]]))
-
-^{:nextjournal.clerk/visibility {:code :hide :result :hide}}
 ^::clerk/no-cache
 (def incidents (with-open [node (start-xtdb!)]
                  (->> node
@@ -33,20 +16,21 @@
                       (sort-by :duration-minutes)
                       reverse)))
 
-(my-table
-  {:head ["Date" "Duration" "Title" "Municipality" "Intersection"]
-   :limit 100
-   :rows (->>
-     incidents
-     (sort-by :start-date)
-     reverse
-     (map (fn [i] [(format-date-time (:start-date i))
-                   (or (:duration-minutes i) "-")
-                   (:title i)
-                   (:municipality i)
-                   [:a {:target "_blank"
-                        :href (str (map-link (:municipality i) (:streets i)))}
-                    (str/join " & " (:streets i))]])))})
+(clerk/table
+ {::clerk/page-size 100}
+ {:head ["Date" "Duration" "Title" "Municipality" "Intersection"]
+  :rows (->> incidents
+             (sort-by :start-date)
+             reverse
+             (map (fn [i]
+                    [(format-date-time (:start-date i))
+                     (or (:duration-minutes i) "-")
+                     (:title i)
+                     (:municipality i)
+                     (clerk/html [:a
+                                  {:target "_blank"
+                                   :href (str (map-link (:municipality i) (:streets i)))}
+                                  (str/join " & " (:streets i))])])))})
 
 (clerk/plotly
  (let [fact-count (->>
@@ -105,17 +89,17 @@
     :layout {:title "Incident Count by Municipality"}
     :config {}}))
 
-(my-table
+(clerk/table
+ {::clerk/page-size 250}
  {:head ["Municipality" "Count"]
-  :limit 250
   :rows (->>
          incidents
          (group-by :municipality)
          (map
           (fn [[municipality v]]
-            [[:a
-              {:target "_blank" :href (str (map-link municipality nil))}
-              municipality]
+            [(clerk/html [:a
+                          {:target "_blank" :href (str (map-link municipality nil))}
+                          municipality])
              (count v)]))
          (sort-by last)
          reverse)})
@@ -136,18 +120,18 @@
     :layout {:title "Incident Count by Intersection"}
     :config {}}))
 
-(my-table
+(clerk/table
+ {::clerk/page-size 250}
  {:head ["Municipality" "Intersection" "Incidents"]
-  :limit 250
   :rows (->>
          incidents
          (group-by (fn [i] (cons (:municipality i) (sort (:streets i)))))
          (map
           (fn [[[municipality & streets] v]]
             [municipality
-             [:a
-              {:target "_blank" :href (str (map-link municipality streets))}
-              (str/join " & " streets)]
+             (clerk/html [:a
+                          {:target "_blank" :href (str (map-link municipality streets))}
+                          (str/join " & " streets)])
              (count v)]))
          (sort-by last)
          reverse)})
