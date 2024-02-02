@@ -1,9 +1,10 @@
 body {
     font-family: 'Helvetica Neue', Verdana, Helvetica, Arial, sans-serif;
-    font-size: 20pt;
+    font-size: 16pt;
     margin: 0 auto;
     -webkit-font-smoothing: antialiased;
-    width: 100%;
+    width: 90%;
+    min-width: 640px;
     background: white;
     padding-left: 1ex;
     padding-right: 1ex;
