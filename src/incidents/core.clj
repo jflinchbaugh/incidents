@@ -352,6 +352,7 @@
                       {:target "_blank"}
                       "clerk/index.html"
                       "Clerk")
+                     " "
                      (e/link-to
                        {:target "_blank"}
                        "https://www.lcwc911.us/live-incident-list"
