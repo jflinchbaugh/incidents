@@ -323,7 +323,10 @@
            (p/html5 {:lang "en"}
                     [:head
                      [:title title]
-                     (p/include-css "style.css")]
+                     (p/include-css "style.css")
+                     [:link
+                      {:rel "shortcut icon"
+                       :href "emergency-light.png"}]]
                     [:body
                      [:h1 title]
                      (apply
@@ -357,6 +360,7 @@
 
 (defn copy-resources! [dest]
   (copy-file! "web/htaccess" (str dest "/.htaccess"))
+  (copy-file! "web/emergency-light.png" (str dest "/emergency-light.png"))
   (copy-file! "web/style.css" (str dest "/style.css"))
   (copy-file! "web/reloader.js" (str dest "/reloader.js")))
 
