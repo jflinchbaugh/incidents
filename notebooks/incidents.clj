@@ -75,6 +75,38 @@
     :config {}}))
 
 (clerk/plotly
+  (let [title-count (->>
+                      incidents
+                      (group-by :title)
+                      (map
+                        (fn [[title v]]
+                          [title (count v)]))
+                      (sort-by (juxt last first))
+                      reverse)
+        num-to-show 12
+        other ["Other"
+               (->> title-count (drop num-to-show) (map second) (reduce +))]
+        title-count-show (concat (take num-to-show title-count) [other])]
+    {:data [{:labels (map first title-count-show)
+             :values (map second title-count-show)
+             :type "pie"
+             :sort false}]
+     :layout {:title "Incident Count by Title"}
+     :config {}}))
+
+(clerk/table
+  {::clerk/page-size 250}
+  {:head ["Title" "Incidents"]
+   :rows (->>
+           incidents
+           (group-by :title)
+           (map
+             (fn [[title v]]
+               [title (count v)]))
+           (sort-by (juxt last first))
+           reverse)})
+
+(clerk/plotly
  (let [muni-count (->>
                    incidents
                    (group-by :municipality)
@@ -124,36 +156,4 @@
                    (str/join " & " streets)])
                 (count v)]))
            (sort-by last)
-           reverse)})
-
-(clerk/plotly
-  (let [title-count (->>
-                      incidents
-                      (group-by :title)
-                      (map
-                        (fn [[title v]]
-                          [title (count v)]))
-                      (sort-by (juxt last first))
-                      reverse)
-        num-to-show 12
-        other ["Other"
-               (->> title-count (drop num-to-show) (map second) (reduce +))]
-        title-count-show (concat (take num-to-show title-count) [other])]
-    {:data [{:labels (map first title-count-show)
-             :values (map second title-count-show)
-             :type "pie"
-             :sort false}]
-     :layout {:title "Incident Count by Title"}
-     :config {}}))
-
-(clerk/table
-  {::clerk/page-size 250}
-  {:head ["Title" "Incidents"]
-   :rows (->>
-           incidents
-           (group-by :title)
-           (map
-             (fn [[title v]]
-               [title (count v)]))
-           (sort-by (juxt last first))
            reverse)})
