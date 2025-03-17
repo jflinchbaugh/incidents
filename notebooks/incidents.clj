@@ -82,10 +82,14 @@
                     (fn [[municipality v]]
                       [municipality (count v)]))
                    (sort-by last)
-                   reverse)]
-   {:data [{:x (map first muni-count)
-            :y (map second muni-count)
-            :type "bar"}]
+                   reverse)
+       show 12
+       other ["Other" (->> muni-count (drop show) (map second) (reduce +))]
+       muni-count-show (concat (take show muni-count) [other])]
+   {:data [{:labels (map first muni-count-show)
+            :values (map second muni-count-show)
+            :type "pie"
+            :sort false}]
     :layout {:title "Incident Count by Municipality"}
     :config {}}))
 
