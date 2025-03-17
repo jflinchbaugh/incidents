@@ -144,11 +144,14 @@
                         (fn [[title v]]
                           [title (count v)]))
                       (sort-by (juxt last first))
-                      reverse
-                      (take 100))]
-    {:data [{:x (map first title-count)
-             :y (map second title-count)
-             :type "bar"}]
+                      reverse)
+        other ["Other" (->> title-count (drop 10) (map second) (reduce +))]
+        title-count-show (concat (take 10 title-count) [other])
+        ]
+    {:data [{:labels (map first title-count-show)
+             :values (map second title-count-show)
+             :type "pie"
+             :sort false}]
      :layout {:title "Incident Count by Title"}
      :config {}}))
 
