@@ -121,17 +121,45 @@
     :config {}}))
 
 (clerk/table
- {::clerk/page-size 250}
- {:head ["Municipality" "Intersection" "Incidents"]
-  :rows (->>
-         incidents
-         (group-by (fn [i] (cons (:municipality i) (sort (:streets i)))))
-         (map
-          (fn [[[municipality & streets] v]]
-            [municipality
-             (clerk/html [:a
-                          {:target "_blank" :href (str (map-link municipality streets))}
-                          (str/join " & " streets)])
-             (count v)]))
-         (sort-by last)
-         reverse)})
+  {::clerk/page-size 250}
+  {:head ["Municipality" "Intersection" "Incidents"]
+   :rows (->>
+           incidents
+           (group-by (fn [i] (cons (:municipality i) (sort (:streets i)))))
+           (map
+             (fn [[[municipality & streets] v]]
+               [municipality
+                (clerk/html [:a
+                             {:target "_blank" :href (str (map-link municipality streets))}
+                             (str/join " & " streets)])
+                (count v)]))
+           (sort-by last)
+           reverse)})
+
+(clerk/plotly
+  (let [title-count (->>
+                      incidents
+                      (group-by :title)
+                      (map
+                        (fn [[title v]]
+                          [title (count v)]))
+                      (sort-by (juxt last first))
+                      reverse
+                      (take 100))]
+    {:data [{:x (map first title-count)
+             :y (map second title-count)
+             :type "bar"}]
+     :layout {:title "Incident Count by Title"}
+     :config {}}))
+
+(clerk/table
+  {::clerk/page-size 250}
+  {:head ["Title" "Incidents"]
+   :rows (->>
+           incidents
+           (group-by :title)
+           (map
+             (fn [[title v]]
+               [title (count v)]))
+           (sort-by (juxt last first))
+           reverse)})
