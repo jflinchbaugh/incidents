@@ -108,32 +108,6 @@
          (sort-by last)
          reverse)})
 
-(clerk/plotly
- (let [muni-count (->>
-                   incidents
-                   (group-by
-                     (fn [i]
-                       (cons (:municipality i) (sort (:streets i)))))
-                   (map
-                    (fn [[[municipality & streets] v]]
-                      [(str municipality ": " (str/join " & " streets))
-                       (count v)]))
-                   (sort-by last)
-                   reverse)
-       num-to-show 12
-       muni-count-other ["Other"
-                         (->> muni-count
-                           (drop num-to-show)
-                           (map second)
-                           (reduce +))]
-       muni-count-show (concat (take num-to-show muni-count) [muni-count-other])]
-   {:data [{:labels (map first muni-count-show)
-            :values (map second muni-count-show)
-            :type "pie"
-            :sort false}]
-    :layout {:title "Incident Count by Intersection"}
-    :config {}}))
-
 (clerk/table
   {::clerk/page-size 250}
   {:head ["Municipality" "Intersection" "Incidents"]
