@@ -4,7 +4,7 @@
   jarohen/chime {:mvn/version "0.3.3"}
   org.clojars.gnzh/feedparser-clj {:mvn/version "0.6.1"}
   tick/tick {:mvn/version "1.0"}
-  com.xtdb/xtdb-http-client {:mvn/version "1.24.4"}
+  com.xtdb/xtdb-http-client {:mvn/version "1.24.5"}
   com.taoensso/timbre {:mvn/version "6.6.1"}
   com.fzakaria/slf4j-timbre {:mvn/version "0.4.1"}
   com.magnars/test-with-files {:mvn/version "2021-02-17"}
