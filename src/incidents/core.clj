@@ -134,7 +134,10 @@
     "1a" "1A"
     "2a" "2A"
     "3a" "3A"
-    "Co" "CO"}
+    "Co" "CO"
+    "Ecc" "ECC"
+    "Ema" "EMA"
+    "Micu" "MICU"}
    s
    s))
 
