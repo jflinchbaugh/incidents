@@ -1,3 +1,3 @@
 #!/bin/sh
 
-clojure -J-server -J-Xmx64m -J-Xmx64m -M -m incidents.core "$@"
+clojure -J-server -J-Xms128m -J-Xmx128m -M -m incidents.core "$@"
