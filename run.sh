@@ -1,5 +1,3 @@
 #!/bin/sh
 
-clojure \
-    -J-server -J-XX:MaxRAMPercentage=35 -J-XX:MinRAMPercentage=35 \
-    -M -m incidents.core "$@"
+clojure -J-server -J-Xmx64m -J-Xmx64m -M -m incidents.core "$@"
