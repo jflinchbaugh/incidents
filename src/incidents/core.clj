@@ -302,7 +302,11 @@
      {:target "_blank"}
      (map-link f)
      (format-streets (:streets f)))]
-   [:div.municipality (:municipality f)]
+   [:div.municipality
+    (e/link-to
+      {:target "_blank"}
+      (map-link f)
+      (:municipality f))]
    [:div.start-date (format-date-time (:start-date f))]
    [:div.title (:title f)]
    [:div.units (str/join ", " (:units f))]])
