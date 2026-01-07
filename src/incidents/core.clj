@@ -337,7 +337,9 @@
                       {:rel "shortcut icon"
                        :href "emergency-light.png"}]]
                     [:body
-                     [:h1 title]
+                     [:header.main-header
+                      [:img.logo {:src "emergency-light.png" :alt ""}]
+                      [:h1 title]]
                      (apply
                       concat
                       (for [type [:traffic :fire :medical]]
