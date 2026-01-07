@@ -296,7 +296,7 @@
    (map-link (:municipality fact) (:streets fact))))
 
 (defn report-entry [f]
-  [:li
+  [:li.incident-card {:class (name (:incident-type f))}
    [:div.streets
     (e/link-to
      {:target "_blank"}

@@ -1,11 +1,167 @@
+:root {
+  --bg-color: #f3f4f6;
+  --text-main: #1f2937;
+  --text-muted: #6b7280;
+  --card-bg: #ffffff;
+  --card-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+  --border-radius: 0.5rem;
+
+  /* Type Colors */
+  --color-fire: #ef4444; /* Red */
+  --color-medical: #3b82f6; /* Blue */
+  --color-traffic: #f59e0b; /* Amber/Orange */
+  --color-default: #9ca3af; /* Gray */
+}
+
+* {
+  box-sizing: border-box;
+}
+
 body {
-    font-family: 'Helvetica Neue', Verdana, Helvetica, Arial, sans-serif;
-    font-size: 16pt;
-    margin: 0 auto;
-    -webkit-font-smoothing: antialiased;
-    width: 90%;
-    min-width: 640px;
-    background: white;
-    padding-left: 1ex;
-    padding-right: 1ex;
+  font-family: system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  background-color: var(--bg-color);
+  color: var(--text-main);
+  margin: 0 auto;
+  max-width: 800px;
+  padding: 2rem 1rem;
+  line-height: 1.5;
+}
+
+h1 {
+  text-align: center;
+  font-size: 2.5rem;
+  margin-bottom: 2rem;
+  color: #111827;
+  font-weight: 800;
+}
+
+h2 {
+  font-size: 1.5rem;
+  margin-top: 2rem;
+  margin-bottom: 1rem;
+  padding-bottom: 0.5rem;
+  border-bottom: 2px solid #e5e7eb;
+  color: #374151;
+}
+
+ul {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 1rem;
+}
+
+a {
+  color: inherit;
+  text-decoration: none;
+}
+
+a:hover {
+  text-decoration: underline;
+}
+
+/* Card Styling */
+.incident-card {
+  background: var(--card-bg);
+  border-radius: var(--border-radius);
+  box-shadow: var(--card-shadow);
+  padding: 1.25rem;
+  border-top: 5px solid var(--color-default);
+  transition: transform 0.2s, box-shadow 0.2s;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.incident-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+}
+
+/* Type Specifics */
+.incident-card.fire {
+  border-top-color: var(--color-fire);
+}
+
+.incident-card.medical {
+  border-top-color: var(--color-medical);
+}
+
+.incident-card.traffic {
+  border-top-color: var(--color-traffic);
+}
+
+/* Card Content */
+.title {
+  font-weight: 700;
+  font-size: 1.1rem;
+  order: 1; /* Move title to top visually if desired, though DOM order is different */
+  margin-bottom: 0.25rem;
+}
+
+.municipality {
+  font-size: 0.875rem;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--text-muted);
+  font-weight: 600;
+  order: 0;
+}
+
+.streets {
+  font-weight: 500;
+  color: #4b5563;
+  margin-bottom: 0.25rem;
+  order: 2;
+}
+
+.start-date {
+  font-size: 0.8rem;
+  color: var(--text-muted);
+  margin-top: auto; /* Push to bottom */
+  order: 10;
+  padding-top: 0.5rem;
+  border-top: 1px solid #f3f4f6;
+}
+
+.units {
+  font-size: 0.85rem;
+  color: #4b5563;
+  background-color: #f9fafb;
+  padding: 0.5rem;
+  border-radius: 0.375rem;
+  margin-top: 0.5rem;
+  order: 3;
+}
+
+/* Helper for map links */
+.streets a, .municipality a {
+  display: block; /* Make the whole area clickable if it's the only child, or inline-block */
+  color: inherit;
+}
+
+/* Footer links styling override */
+body > a {
+  display: inline-block;
+  margin-top: 2rem;
+  color: var(--color-medical);
+  font-weight: 600;
+  margin-right: 1rem;
+}
+
+/* Responsive adjustments */
+@media (max-width: 640px) {
+  body {
+    padding: 1rem;
+  }
+
+  h1 {
+    font-size: 2rem;
+  }
+
+  ul {
+    grid-template-columns: 1fr;
+  }
 }
