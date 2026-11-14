@@ -15,7 +15,6 @@
          :start-date #inst "2022-08-11T03:42:39.000-00:00"
          :active? true
          :title "Medical Emergency"
-         :description "SALISBURY TOWNSHIP"
          :incident-type :medical
          :municipality "Salisbury Township"
          :streets []
@@ -35,9 +34,6 @@
          :start-date #inst "2022-08-11T03:42:39.000-00:00"
          :active? true
          :title "Medical Emergency"
-         :description
-         (str "SALISBURY TOWNSHIP;  CHESTNUT ST & MCBRIDGE ST / ANOMCER RD;"
-              " MED 293 CHESTER<br> AMB 49-2; ")
          :incident-type :medical
          :municipality "Salisbury Township"
          :streets ["Chestnut St" "McBridge St" "Anomcer Rd"]
@@ -57,9 +53,6 @@
          :start-date #inst "2022-08-11T03:42:39.000-00:00"
          :active? true
          :title "Medical Emergency-Whatever"
-         :description
-         (str " SALISBURY TOWNSHIP ;  CHESTNUT ST & MCBRIDGE ST / ANOMCER RD "
-              ";  MED 293 CHESTER <br> AMB 49-2 ; ")
          :incident-type :medical
          :municipality "Salisbury Township"
          :streets ["Chestnut St" "McBridge St" "Anomcer Rd"]
@@ -79,7 +72,6 @@
          :start-date #inst "2022-08-11T03:42:39.000-00:00"
          :active? true
          :title "Medical Emergency"
-         :description "BERKS COUNTY; MED 293 CHESTER<br> AMB 49-2; "
          :incident-type :medical
          :municipality "Berks County"
          :streets []
