@@ -65,7 +65,49 @@
           :unix-time (unix-time instant)}
     :doc rec))
 
+(defn make-last-feed-time-tx [feed-time]
+  (make-put-tx
+   {:xt/id :incidents.feed/last-feed-time
+    :incidents.feed/feed-time feed-time}))
+
+(defn put-last-feed-time! [node feed-time]
+  (->>
+   (make-last-feed-time-tx feed-time)
+   (xt/submit-tx node)
+   (xt/await-tx node)))
+
+(defn get-last-feed-time [node]
+  (or
+   (->>
+    (xt/q
+     (xt/db node)
+     '{:find [?last-feed-time]
+       :where [[?e :xt/id :incidents.feed/last-feed-time]
+               [?e :incidents.feed/feed-time ?last-feed-time]]})
+    ffirst)
+   0))
+
+(defn get-last-feed [node]
+  (let [db (xt/db node)
+        last-time (get-last-feed-time node)]
+    (some->>
+     (xt/q
+      db
+      '{:find [?e ?unix-time]
+        :where [[?e :incidents.feed/type :feed]
+                [?e :incidents.feed/unix-time ?unix-time]
+                [(<= ?last-time ?unix-time)]]
+        :order-by [[?unix-time :desc]]
+        :limit 1
+        :in [?last-time]}
+      last-time)
+     ffirst
+     (xt/entity db)
+     keys->mem)))
+
 (defn put-feed! [node feed]
+  (if (= feed (:doc (get-last-feed node)))
+    (log/info "Feed unchanged, skipping put.")
     (->>
      feed
      (make-feed-rec (tc/now))
@@ -74,7 +116,7 @@
      (keys->db "incidents.feed")
      make-put-tx
      (xt/submit-tx node)
-     (xt/await-tx node)))
+     (xt/await-tx node))))
 
 (defn load-feed! [node source]
   (->>
@@ -124,28 +166,6 @@
     (re-matches #".*(EMS|Medical|Transfer).*" (:title fact)) :medical
     (re-matches #".*(Traffic|Vehicle).*" (:title fact)) :traffic
     :else :fire))
-
-(defn make-last-feed-time-tx [feed-time]
-  (make-put-tx
-   {:xt/id :incidents.feed/last-feed-time
-    :incidents.feed/feed-time feed-time}))
-
-(defn put-last-feed-time! [node feed-time]
-  (->>
-   (make-last-feed-time-tx feed-time)
-   (xt/submit-tx node)
-   (xt/await-tx node)))
-
-(defn get-last-feed-time [node]
-  (or
-   (->>
-    (xt/q
-     (xt/db node)
-     '{:find [?last-feed-time]
-       :where [[?e :xt/id :incidents.feed/last-feed-time]
-               [?e :incidents.feed/feed-time ?last-feed-time]]})
-    ffirst)
-   0))
 
 (defn override [s]
   (get

@@ -147,9 +147,12 @@
     (t/is (= 3 (count (get-all-facts node))) "facts are loaded from staging")
 
     (load-feed! node (io/resource "incidents/feed-1.xml"))
+    (t/is (empty? (get-feeds-since node (get-last-feed-time node)))
+      "duplicate feed is not stored")
+
     (load-feed! node (str (io/resource "incidents/feed-2.xml")))
-    (t/is (= 2 (count (get-feeds-since node (get-last-feed-time node))))
-      "feeds has 2 new docs")
+    (t/is (= 1 (count (get-feeds-since node (get-last-feed-time node))))
+      "feeds has 1 new doc")
 
     (t/is (= 1 (count (transform-facts! node))) "fact transactions")
     (t/is (= 4 (count (get-all-facts node))) "facts are loaded from staging")
@@ -187,7 +190,8 @@
   (with-open [node (xt/start-node {})]
     (t/is node "node is open")
     (t/is (put-feed! node {:doc ""}))
-    (t/is (get-feeds-since node 0))))
+    (t/is (nil? (put-feed! node {:doc ""})))
+    (t/is (= 1 (count (get-feeds-since node 0))))))
 
 (t/deftest test-parse-feed
   (let [source (->>
