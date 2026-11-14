@@ -120,7 +120,7 @@
    (put-feed! node (tc/now) feed))
   ([node instant feed]
    (if (= feed (:doc (get-last-feed node)))
-     (log/info "Feed unchanged, skipping put.")
+     (log/info "Feed unchanged, saving nothing.")
      (->>
       feed
       (make-feed-rec instant)
