@@ -520,15 +520,25 @@
                  (log/info "clerk <output-dir>")
                  (build-clerk! output-dir))))})
 
+(defn evict-all! [node attr val]
+  (loop [txs []]
+    (let [ids (mapv first
+                    (xt/q (xt/db node)
+                          {:find '[?e]
+                           :where [['?e attr val]]
+                           :limit feed-batch-size}))]
+      (if (seq ids)
+        (let [_ (log/info "Evicting" (count ids) "for" attr val)
+              tx (->>
+                  ids
+                  (mapv (fn [id] [::xt/evict id]))
+                  (xt/submit-tx node))]
+          (xt/await-tx node tx)
+          (recur (conj txs tx)))
+        txs))))
+
 (defn delete-all-facts! [node]
-  (let [ids (map first
-              (xt/q (xt/db node) '{:find [?e]
-                                   :where [[?e :incidents.fact/type :fact]]}))]
-    (->>
-      ids
-      (mapv (fn [id] [::xt/evict id]))
-      (xt/submit-tx node)
-      (xt/await-tx node))))
+  (evict-all! node :incidents.fact/type :fact))
 
 (defn reset-facts! [node]
   (delete-all-facts! node)
@@ -553,18 +563,11 @@
         (put-feed! node (tc/instant date) doc)))))
 
 (defn delete-all-feeds! [node]
-  (let [ids (conj
-             (mapv first
-                   (xt/q (xt/db node)
-                         '{:find [?e]
-                           :where [[?e :incidents.feed/type :feed]]}))
-             :incidents.feed/last-feed)]
-    (doseq [batch (partition-all feed-batch-size ids)]
-      (->>
-       batch
-       (mapv (fn [id] [::xt/evict id]))
-       (xt/submit-tx node)
-       (xt/await-tx node)))))
+  (->>
+   [[::xt/evict :incidents.feed/last-feed]]
+   (xt/submit-tx node)
+   (xt/await-tx node))
+  (evict-all! node :incidents.feed/type :feed))
 
 (def connected-actions
   {"load"

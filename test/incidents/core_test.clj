@@ -151,6 +151,9 @@
     (t/is (= 3 (count (get-all-active-facts node))) "active facts updated")
 
     (let [fact-id (:xt/id (first (get-all-facts node)))]
+      (with-redefs [feed-batch-size 2]
+        (t/is (= 2 (count (delete-all-facts! node)))
+          "evicts facts in batches"))
       ((get connected-actions "reset") node nil)
       (t/is (empty? (get-all-facts node)) "reset clears facts")
       (t/is (empty? (xt/entity-history (xt/db node) fact-id :asc))
@@ -233,7 +236,10 @@
         (let [orig-feeds (get-feeds-since node 0)]
           (t/is (= [(str t1) (str t3)] (mapv :date orig-feeds)))
           ((get connected-actions "export") node [file])
-          ((get connected-actions "purge-feeds") node nil)
+          (with-redefs [feed-batch-size 1]
+            (t/is (= 2 (count ((get connected-actions "purge-feeds")
+                               node
+                               nil)))))
           (t/is (empty? (get-feeds-since node 0)))
           (t/is (empty? (xt/entity-history
                          (xt/db node)
