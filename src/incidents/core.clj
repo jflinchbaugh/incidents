@@ -1,6 +1,7 @@
 (ns incidents.core
   (:gen-class)
   (:require [feedparser-clj.core :as fp]
+            [clojure.edn :as edn]
             [clojure.java.io :as io]
             [chime.core :as chime]
             [xtdb.api :as xt]
@@ -88,35 +89,46 @@
    0))
 
 (defn get-last-feed [node]
-  (let [db (xt/db node)
-        last-time (get-last-feed-time node)]
-    (some->>
-     (xt/q
-      db
-      '{:find [?e ?unix-time]
-        :where [[?e :incidents.feed/type :feed]
-                [?e :incidents.feed/unix-time ?unix-time]
-                [(<= ?last-time ?unix-time)]]
-        :order-by [[?unix-time :desc]]
-        :limit 1
-        :in [?last-time]}
-      last-time)
-     ffirst
-     (xt/entity db)
-     keys->mem)))
+  (let [db (xt/db node)]
+    (if-let [feed-id (:incidents.feed/feed-id
+                      (xt/entity db :incidents.feed/last-feed))]
+      (some-> (xt/entity db feed-id) keys->mem)
+      (let [last-time (get-last-feed-time node)]
+        (some->>
+         (xt/q
+          db
+          '{:find [?e ?unix-time]
+            :where [[?e :incidents.feed/type :feed]
+                    [?e :incidents.feed/unix-time ?unix-time]
+                    [(<= ?last-time ?unix-time)]]
+            :order-by [[?unix-time :desc]]
+            :limit 1
+            :in [?last-time]}
+          last-time)
+         ffirst
+         (xt/entity db)
+         keys->mem)))))
 
-(defn put-feed! [node feed]
-  (if (= feed (:doc (get-last-feed node)))
-    (log/info "Feed unchanged, skipping put.")
-    (->>
-     feed
-     (make-feed-rec (tc/now))
-     (tag :feed)
-     add-feed-id
-     (keys->db "incidents.feed")
-     make-put-tx
-     (xt/submit-tx node)
-     (xt/await-tx node))))
+(defn make-feed-tx [feed]
+  (let [db-feed (keys->db "incidents.feed" feed)]
+    [[::xt/put db-feed]
+     [::xt/put {:xt/id :incidents.feed/last-feed
+                :incidents.feed/feed-id (:xt/id db-feed)}]]))
+
+(defn put-feed!
+  ([node feed]
+   (put-feed! node (tc/now) feed))
+  ([node instant feed]
+   (if (= feed (:doc (get-last-feed node)))
+     (log/info "Feed unchanged, skipping put.")
+     (->>
+      feed
+      (make-feed-rec instant)
+      (tag :feed)
+      add-feed-id
+      make-feed-tx
+      (xt/submit-tx node)
+      (xt/await-tx node)))))
 
 (defn load-feed! [node source]
   (->>
@@ -514,13 +526,45 @@
                                    :where [[?e :incidents.fact/type :fact]]}))]
     (->>
       ids
-      (mapv (fn [id] [::xt/delete id]))
+      (mapv (fn [id] [::xt/evict id]))
       (xt/submit-tx node)
       (xt/await-tx node))))
 
 (defn reset-facts! [node]
   (delete-all-facts! node)
   (put-last-feed-time! node 0))
+
+(defn export-feeds! [node file]
+  (with-open [out (-> file
+                      io/output-stream
+                      java.util.zip.GZIPOutputStream.
+                      io/writer)]
+    (binding [*out* out]
+      (doseq [feed (get-feeds-since node 0)]
+        (prn (select-keys feed [:date :doc]))))))
+
+(defn import-feeds! [node file]
+  (with-open [in (-> file
+                     io/input-stream
+                     java.util.zip.GZIPInputStream.
+                     io/reader)]
+    (doseq [line (line-seq in)]
+      (let [{:keys [date doc]} (edn/read-string line)]
+        (put-feed! node (tc/instant date) doc)))))
+
+(defn delete-all-feeds! [node]
+  (let [ids (conj
+             (mapv first
+                   (xt/q (xt/db node)
+                         '{:find [?e]
+                           :where [[?e :incidents.feed/type :feed]]}))
+             :incidents.feed/last-feed)]
+    (doseq [batch (partition-all feed-batch-size ids)]
+      (->>
+       batch
+       (mapv (fn [id] [::xt/evict id]))
+       (xt/submit-tx node)
+       (xt/await-tx node)))))
 
 (def connected-actions
   {"load"
@@ -532,7 +576,23 @@
 
    "reset"
    (fn [xtdb-node _]
-     (reset-facts! xtdb-node))})
+     (reset-facts! xtdb-node))
+
+   "purge-feeds"
+   (fn [xtdb-node _]
+     (delete-all-feeds! xtdb-node))
+
+   "export"
+   (fn [xtdb-node [file]]
+     (if (str/blank? file)
+       (log/info "export <file>")
+       (export-feeds! xtdb-node file)))
+
+   "import"
+   (fn [xtdb-node [file]]
+     (if (str/blank? file)
+       (log/info "import <file>")
+       (import-feeds! xtdb-node file)))})
 
 (defn load-and-report [xtdb-node [output-dir]]
   (doall

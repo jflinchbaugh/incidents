@@ -150,9 +150,12 @@
     (t/is (= 4 (count (get-all-facts node))) "facts are loaded from staging")
     (t/is (= 3 (count (get-all-active-facts node))) "active facts updated")
 
-    ((get connected-actions "reset") node nil)
-    (t/is (empty? (get-all-facts node)) "reset clears facts")
-    (t/is (= 0 (get-last-feed-time node)) "reset clears last-feed-time")
+    (let [fact-id (:xt/id (first (get-all-facts node)))]
+      ((get connected-actions "reset") node nil)
+      (t/is (empty? (get-all-facts node)) "reset clears facts")
+      (t/is (empty? (xt/entity-history (xt/db node) fact-id :asc))
+        "reset evicts fact history")
+      (t/is (= 0 (get-last-feed-time node)) "reset clears last-feed-time"))
 
     (t/is (= 2 (count (transform-facts! node))) "reprocess fact transactions")
     (t/is (= 4 (count (get-all-facts node))) "facts are reprocessed")))
@@ -215,3 +218,37 @@
           _ (put-last-feed-time! node earlier)
           _ (put-last-feed-time! node now)]
       (t/is (= now (get-last-feed-time node))))))
+
+(t/deftest test-export-import
+  (with-tmp-dir tmp-dir
+    (with-open [node (xt/start-node {})]
+      (let [t1 (tc/instant "2022-08-11T03:40:00Z")
+            t2 (tc/instant "2022-08-11T03:45:00Z")
+            t3 (tc/instant "2022-08-11T03:50:00Z")
+            doc-1 (slurp (io/resource "incidents/feed-1.xml"))
+            doc-2 (slurp (io/resource "incidents/feed-2.xml"))
+            file (str (io/file tmp-dir "feeds.edn.gz"))]
+        (put-feed! node t1 doc-1)
+        (put-feed! node t3 doc-2)
+        (let [orig-feeds (get-feeds-since node 0)]
+          (t/is (= [(str t1) (str t3)] (mapv :date orig-feeds)))
+          ((get connected-actions "export") node [file])
+          ((get connected-actions "purge-feeds") node nil)
+          (t/is (empty? (get-feeds-since node 0)))
+          (t/is (empty? (xt/entity-history
+                         (xt/db node)
+                         (:xt/id (first orig-feeds))
+                         :asc)))
+          ((get connected-actions "import") node [file])
+          (t/is (= orig-feeds (get-feeds-since node 0)))
+          ((get connected-actions "purge-feeds") node nil)
+          (with-open [out (-> file
+                              io/output-stream
+                              java.util.zip.GZIPOutputStream.
+                              io/writer)]
+            (binding [*out* out]
+              (prn {:date (str t1) :doc doc-1})
+              (prn {:date (str t2) :doc doc-1})
+              (prn {:date (str t3) :doc doc-2})))
+          ((get connected-actions "import") node [file])
+          (t/is (= orig-feeds (get-feeds-since node 0))))))))
