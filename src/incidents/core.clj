@@ -190,6 +190,7 @@
       :start-date (:published-date in)
       :active? true
       :title (format-title (:title in))
+      :description (get-in in [:description :value])
       :municipality (format-municipality municipality)
       :streets (parse-streets streets)
       :units (parse-units units)}
