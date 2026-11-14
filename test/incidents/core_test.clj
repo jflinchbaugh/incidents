@@ -143,15 +143,24 @@
 
     (t/is (empty? (get-all-facts node)) "facts start empty")
 
-    (t/is (= 4 (count (first (transform-facts! node)))) "fact transactions")
+    (t/is (= 1 (count (transform-facts! node))) "fact transactions")
     (t/is (= 3 (count (get-all-facts node))) "facts are loaded from staging")
 
+    (load-feed! node (io/resource "incidents/feed-1.xml"))
     (load-feed! node (str (io/resource "incidents/feed-2.xml")))
-    (t/is (= 1 (count (get-feeds-since node (get-last-feed-time node))))
-      "feeds has 1 new doc")
+    (t/is (= 2 (count (get-feeds-since node (get-last-feed-time node))))
+      "feeds has 2 new docs")
 
     (t/is (= 1 (count (transform-facts! node))) "fact transactions")
-    (t/is (= 4 (count (get-all-facts node))) "facts are loaded from staging")))
+    (t/is (= 4 (count (get-all-facts node))) "facts are loaded from staging")
+    (t/is (= 3 (count (get-all-active-facts node))) "active facts updated")
+
+    ((get connected-actions "reset") node nil)
+    (t/is (empty? (get-all-facts node)) "reset clears facts")
+    (t/is (= 0 (get-last-feed-time node)) "reset clears last-feed-time")
+
+    (t/is (= 2 (count (transform-facts! node))) "reprocess fact transactions")
+    (t/is (= 4 (count (get-all-facts node))) "facts are reprocessed")))
 
 (t/deftest test-keys-db-mem
   (t/testing "round trip values through keys transformation"

@@ -82,19 +82,39 @@
    slurp
    (put-feed! node)))
 
-(defn get-feeds-since [node last-time]
+(def feed-batch-size 100)
+
+(defn get-feed-ids-since [db last-time]
   (->>
    (xt/q
-    (xt/db node)
-    '{:find [(pull ?e [*]) ?unix-time]
+    db
+    '{:find [?e ?unix-time]
       :where [[?e :incidents.feed/type :feed]
               [?e :incidents.feed/unix-time ?unix-time]
               [(< ?last-time ?unix-time)]]
       :order-by [[?unix-time :asc]]
       :in [?last-time]}
     last-time)
+   (mapv first)))
+
+(defn get-feeds-batch [db feed-ids]
+  (->>
+   (xt/q
+    db
+    '{:find [(pull ?e [*]) ?unix-time]
+      :where [[?e :incidents.feed/unix-time ?unix-time]]
+      :order-by [[?unix-time :asc]]
+      :in [[?e ...]]}
+    feed-ids)
    (mapv first)
    (mapv keys->mem)))
+
+(defn get-feeds-since [node last-time]
+  (let [db (xt/db node)]
+    (->>
+     (get-feed-ids-since db last-time)
+     (partition-all feed-batch-size)
+     (mapcat (partial get-feeds-batch db)))))
 
 (defn incident-type [fact]
   (cond
@@ -105,11 +125,14 @@
     (re-matches #".*(Traffic|Vehicle).*" (:title fact)) :traffic
     :else :fire))
 
+(defn make-last-feed-time-tx [feed-time]
+  (make-put-tx
+   {:xt/id :incidents.feed/last-feed-time
+    :incidents.feed/feed-time feed-time}))
+
 (defn put-last-feed-time! [node feed-time]
   (->>
-   [[::xt/put
-     {:xt/id :incidents.feed/last-feed-time
-      :incidents.feed/feed-time feed-time}]]
+   (make-last-feed-time-tx feed-time)
    (xt/submit-tx node)
    (xt/await-tx node)))
 
@@ -230,44 +253,103 @@
          :active? false
          :duration-minutes (tc/minutes (tc/between (:start-date fact) date))))
 
+(defn make-fact-tx [fact]
+  (make-put-tx (keys->db "incidents.fact" fact)))
+
+(defn parse-feed [feed]
+  (->>
+   feed
+   :doc
+   java.io.StringBufferInputStream.
+   fp/parse-feed
+   :entries
+   (map prune)
+   (sort-by :uri)
+   (map parse)
+   (map (partial tag :fact))
+   (mapv add-fact-id)))
+
+(defn feed-fact-txs [active-facts feed]
+  (let [new-facts (parse-feed feed)
+        new-ids (set (map :xt/id new-facts))
+        updated-facts (remove (set active-facts) new-facts)
+        ended-facts (remove (comp new-ids :xt/id) active-facts)]
+    (log/info
+     "Found"
+     (count active-facts)
+     "Updating"
+     (count updated-facts)
+     "Ending"
+     (count ended-facts)
+     "for"
+     (:date feed))
+    {:active-facts new-facts
+     :tx-ops (vec
+              (concat
+               (->>
+                ended-facts
+                (map (partial end (tc/inst (:date feed))))
+                (mapcat make-fact-tx))
+               (mapcat make-fact-tx updated-facts)))}))
+
+(defn transform-feeds-batch! [node active-facts feeds]
+  (let [{:keys [active-facts last-tx uncommitted-time txs]}
+        (reduce
+         (fn [state feed]
+           (let [{:keys [active-facts tx-ops]}
+                 (feed-fact-txs (:active-facts state) feed)
+                 feed-time (:unix-time feed)]
+             (if (seq tx-ops)
+               (let [tx (xt/submit-tx
+                         node
+                         (into tx-ops (make-last-feed-time-tx feed-time)))]
+                 {:active-facts active-facts
+                  :last-tx tx
+                  :uncommitted-time nil
+                  :txs (conj (:txs state) tx)})
+               {:active-facts active-facts
+                :last-tx (:last-tx state)
+                :uncommitted-time feed-time
+                :txs (:txs state)})))
+         {:active-facts active-facts
+          :last-tx nil
+          :uncommitted-time nil
+          :txs []}
+         feeds)
+        final-tx (if uncommitted-time
+                   (xt/submit-tx
+                    node
+                    (make-last-feed-time-tx uncommitted-time))
+                   last-tx)
+        txs (if uncommitted-time
+              (conj txs final-tx)
+              txs)]
+    (when final-tx
+      (xt/await-tx node final-tx))
+    {:active-facts active-facts
+     :txs txs}))
+
 (defn transform-facts!
   [node]
-  (let [last-feed-time (get-last-feed-time node)
-        feeds (get-feeds-since node last-feed-time)]
-    (for [feed feeds]
-      (let [new-facts (->>
-                       feed
-                       :doc
-                       java.io.StringBufferInputStream.
-                       fp/parse-feed
-                       :entries
-                       (map prune)
-                       (sort-by :uri)
-                       (map parse)
-                       (map (partial tag :fact))
-                       (map add-fact-id))
-            active-facts (get-all-active-facts node)
-            updated-facts (remove (set active-facts) new-facts)
-            ended-facts (remove (set new-facts) active-facts)
-            _ (log/info
-               "Found"
-               (count active-facts)
-               "Updating"
-               (count updated-facts)
-               "Ending"
-               (count ended-facts)
-               "for"
-               (:date feed))]
-        (doall
-         (concat
-          (->>
-           ended-facts
-           (map (partial end (tc/inst (:date feed))))
-           (map (partial put-fact! node)))
-          (->>
-           updated-facts
-           (map (partial put-fact! node)))
-          [(put-last-feed-time! node (:unix-time feed))]))))))
+  (let [db (xt/db node)
+        last-feed-time (get-last-feed-time node)
+        feed-id-batches (->>
+                         (get-feed-ids-since db last-feed-time)
+                         (partition-all feed-batch-size))]
+    (when (seq feed-id-batches)
+      (:txs
+       (reduce
+        (fn [{:keys [active-facts txs]} feed-ids]
+          (let [feeds (get-feeds-batch db feed-ids)
+                batch-res (transform-feeds-batch!
+                           node
+                           active-facts
+                           feeds)]
+            {:active-facts (:active-facts batch-res)
+             :txs (into txs (:txs batch-res))}))
+        {:active-facts (get-all-active-facts node)
+         :txs []}
+        feed-id-batches)))))
 
 (defn format-date-part [fmt d]
   (tc/format fmt (tc/date-time d)))
@@ -407,13 +489,31 @@
                  (log/info "clerk <output-dir>")
                  (build-clerk! output-dir))))})
 
+(defn delete-all-facts! [node]
+  (let [ids (map first
+              (xt/q (xt/db node) '{:find [?e]
+                                   :where [[?e :incidents.fact/type :fact]]}))]
+    (->>
+      ids
+      (mapv (fn [id] [::xt/delete id]))
+      (xt/submit-tx node)
+      (xt/await-tx node))))
+
+(defn reset-facts! [node]
+  (delete-all-facts! node)
+  (put-last-feed-time! node 0))
+
 (def connected-actions
   {"load"
    (fn [xtdb-node _]
      (doall
       (concat
        (load-feed! xtdb-node feed-url)
-       (transform-facts! xtdb-node))))})
+       (transform-facts! xtdb-node))))
+
+   "reset"
+   (fn [xtdb-node _]
+     (reset-facts! xtdb-node))})
 
 (defn load-and-report [xtdb-node [output-dir]]
   (doall
@@ -485,15 +585,6 @@
         (apply concat)
         (str/join "|")))))
   (shutdown-agents))
-
-(defn delete-all-facts! [node]
-  (let [ids (map first
-              (xt/q (xt/db node) '{:find [?e]
-                                   :where [[?e :incidents.fact/type :fact]]}))]
-    (->>
-      ids
-      (mapv #(-> [::xt/delete %]))
-      (xt/submit-tx node))))
 
 (comment
 
