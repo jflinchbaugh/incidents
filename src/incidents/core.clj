@@ -120,7 +120,7 @@
    (put-feed! node (tc/now) feed))
   ([node instant feed]
    (if (= feed (:doc (get-last-feed node)))
-     (log/info (str "Feed unchanged, saving nothing for " (:date feed)))
+     (log/info (str "Feed unchanged, saving nothing for " instant))
      (->>
       feed
       (make-feed-rec instant)
