@@ -22,3 +22,27 @@ $ clojure -M -m incident.core list
 ```bash
 $ clojure -M:test/run
 ```
+
+## Reprocessing Facts
+
+Evict all derived facts, reset `last-feed-time`, and rebuild facts from stored
+feeds:
+
+```bash
+$ ./run.sh reset
+$ ./run.sh load
+```
+
+## Exporting and Re-importing Feeds
+
+Export all stored feeds with their historical timestamps to a compressed
+archive, evict existing feeds, re-import (deduplicating unchanged feeds), and
+reprocess facts:
+
+```bash
+$ ./run.sh export feeds.edn.gz
+$ ./run.sh purge-feeds
+$ ./run.sh import feeds.edn.gz
+$ ./run.sh reset
+$ ./run.sh load
+```
