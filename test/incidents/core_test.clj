@@ -7,7 +7,8 @@
             [chime.core :as chime]
             [clojure.java.io :as io]
             [test-with-files.tools :refer [with-tmp-dir]]
-            [clojure.string :as str]))
+            [clojure.string :as str]
+            [taoensso.timbre :as log]))
 
 (t/deftest test-parse
   (t/testing "parse null values"
@@ -316,3 +317,20 @@
           ((get connected-actions "purge-feeds") node nil)
           ((get connected-actions "gc") node nil)
           (t/is (<= (ksv-count) (+ base-files 2))))))))
+
+(t/deftest test-datahike-logging
+  (with-db [node (mem-db-config)]
+    (t/is
+     (= ""
+        (with-out-str
+          (d/q
+           '[:find ?e :where [?e :incidents.feed/type :feed]]
+           (d/db node)
+           :ignored)))))
+  (t/is
+   (str/includes?
+    (log/with-merged-config
+      {:min-level :debug :ns-filter #{"datahike.*"}}
+      (with-out-str
+        (with-db [node (mem-db-config)])))
+    ":datahike/connect")))

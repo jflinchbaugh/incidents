@@ -11,8 +11,11 @@
             [hiccup.page :as p]
             [hiccup.element :as e]
             [hiccup.util :as u]
-            [nextjournal.clerk :as clerk]))
+            [nextjournal.clerk :as clerk]
+            [taoensso.trove :as trove]
+            [taoensso.trove.timbre :as trove-timbre]))
 
+(trove/set-log-fn! (trove-timbre/get-log-fn))
 (log/merge-config! {:ns-filter #{"incidents.*"}})
 
 (def feed-url "https://webcad.lcwc911.us/Pages/Public/LiveIncidentsFeed.aspx")
