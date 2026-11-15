@@ -248,7 +248,10 @@
           (t/is (nil? (d/entity
                        (d/db node)
                        [:incidents.feed/date (:date (first orig-feeds))])))
-          ((get connected-actions "import") node [file])
+          (t/is (str/includes?
+                 (with-out-str
+                   ((get connected-actions "import") node [file]))
+                 (str "Importing 2 for " t1)))
           (t/is (= orig-feeds (get-feeds-since node 0)))
           ((get connected-actions "purge-feeds") node nil)
           (with-open [out (-> file

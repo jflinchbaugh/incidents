@@ -614,6 +614,7 @@
       (doseq [batch (->> entries
                          (changed-feeds last-doc)
                          (partition-all feed-batch-size))]
+        (log/info "Importing" (count batch) "for" (:date (first batch)))
         (d/transact node (make-feeds-tx batch))
         (gc! node)))))
 
