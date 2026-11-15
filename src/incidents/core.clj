@@ -196,6 +196,8 @@
 
 (def feed-batch-size 100)
 
+(def gc-batch-interval 10)
+
 (defn get-feed-ids-since [db last-time]
   (->>
    (d/q
@@ -355,7 +357,7 @@
    (mapv (partial tag :fact))))
 
 (defn feed-fact-txs [active-facts feed]
-  (let [new-facts (parse-feed feed)
+  (let [new-facts (or (:facts feed) (parse-feed feed))
         new-uris (set (map :uri new-facts))
         updated-facts (remove (set active-facts) new-facts)
         ended-facts (remove (comp new-uris :uri) active-facts)]
@@ -378,33 +380,28 @@
                (mapcat make-fact-tx updated-facts)))}))
 
 (defn transform-feeds-batch! [node active-facts feeds]
-  (let [{:keys [active-facts uncommitted-time txs]}
+  (let [feeds (pmap (fn [feed] (assoc feed :facts (parse-feed feed))) feeds)
+        {:keys [active-facts tx-ops]}
         (reduce
          (fn [state feed]
            (let [{:keys [active-facts tx-ops]}
-                 (feed-fact-txs (:active-facts state) feed)
-                 feed-time (:unix-time feed)]
-             (if (seq tx-ops)
-               (let [tx (d/transact
-                         node
-                         (into tx-ops (make-last-feed-time-tx feed-time)))]
-                 {:active-facts active-facts
-                  :uncommitted-time nil
-                  :txs (conj (:txs state) tx)})
-               {:active-facts active-facts
-                :uncommitted-time feed-time
-                :txs (:txs state)})))
+                 (feed-fact-txs (:active-facts state) feed)]
+             {:active-facts active-facts
+              :tx-ops (reduce
+                       (fn [acc op]
+                         (update acc (:incidents.fact/uri op) merge op))
+                       (:tx-ops state)
+                       tx-ops)}))
          {:active-facts active-facts
-          :uncommitted-time nil
-          :txs []}
-         feeds)
-        txs (if uncommitted-time
-              (conj txs (d/transact
-                         node
-                         (make-last-feed-time-tx uncommitted-time)))
-              txs)]
+          :tx-ops {}}
+         feeds)]
     {:active-facts active-facts
-     :txs txs}))
+     :txs (if-let [last-time (:unix-time (last feeds))]
+            [(d/transact
+              node
+              (into (vec (vals tx-ops))
+                    (make-last-feed-time-tx last-time)))]
+            [])}))
 
 (defn transform-facts!
   [node]
@@ -416,16 +413,21 @@
     (when (seq feed-id-batches)
       (:txs
        (reduce
-        (fn [{:keys [active-facts txs]} feed-ids]
+        (fn [{:keys [active-facts txs batch-num]} feed-ids]
           (let [feeds (get-feeds-batch db feed-ids)
                 batch-res (transform-feeds-batch!
                            node
                            active-facts
-                           feeds)]
+                           feeds)
+                next-batch-num (inc batch-num)]
+            (when (zero? (mod next-batch-num gc-batch-interval))
+              (gc! node))
             {:active-facts (:active-facts batch-res)
-             :txs (into txs (:txs batch-res))}))
+             :txs (into txs (:txs batch-res))
+             :batch-num next-batch-num}))
         {:active-facts (get-all-active-facts node)
-         :txs []}
+         :txs []
+         :batch-num 0}
         feed-id-batches)))))
 
 (defn format-date-part [fmt d]
@@ -609,14 +611,19 @@
                      io/input-stream
                      java.util.zip.GZIPInputStream.
                      io/reader)]
-    (let [entries (map edn/read-string (line-seq in))
-          last-doc (:doc (get-last-feed node))]
-      (doseq [batch (->> entries
-                         (changed-feeds last-doc)
-                         (partition-all feed-batch-size))]
+    (let [entries (pmap edn/read-string (line-seq in))
+          last-doc (:doc (get-last-feed node))
+          batches (->> entries
+                       (changed-feeds last-doc)
+                       (partition-all feed-batch-size)
+                       (pmap (fn [batch]
+                               [batch (make-feeds-tx batch)])))]
+      (doseq [[idx [batch tx-data]] (map-indexed vector batches)]
         (log/info "Importing" (count batch) "for" (:date (first batch)))
-        (d/transact node (make-feeds-tx batch))
-        (gc! node)))))
+        (d/transact node tx-data)
+        (when (zero? (mod (inc idx) gc-batch-interval))
+          (gc! node)))
+      (gc! node))))
 
 (defn delete-all-feeds! [node]
   (d/transact

@@ -156,8 +156,15 @@
         "reset retracts fact entity")
       (t/is (= 0 (get-last-feed-time node)) "reset clears last-feed-time"))
 
-    (t/is (= 2 (count (transform-facts! node))) "reprocess fact transactions")
-    (t/is (= 4 (count (get-all-facts node))) "facts are reprocessed")))
+    (t/is (= 1 (count (transform-facts! node)))
+      "reprocess fact transactions in one batch")
+    (t/is (= 4 (count (get-all-facts node))) "facts are reprocessed")
+    (t/is (= 3 (count (get-all-active-facts node)))
+      "active facts updated after batch reprocess")
+    (with-redefs [feed-batch-size 1]
+      ((get connected-actions "reset") node nil)
+      (t/is (= 2 (count (transform-facts! node)))
+        "reprocess fact transactions across batches"))))
 
 (t/deftest test-keys-db-mem
   (t/testing "round trip values through keys transformation"
