@@ -65,14 +65,34 @@
 
 (def db-lock (Object.))
 
+(def db-conn (atom nil))
+
+(defmacro with-shared-db
+  [[& args] & body]
+  `(let [conn# (locking db-lock
+                 (let [c# (start-db! ~@args)]
+                   (reset! db-conn c#)
+                   c#))]
+     (try
+       ~@body
+       (finally
+         (locking db-lock
+           (reset! db-conn nil)
+           (d/release conn#))))))
+
 (defmacro with-db
   [[sym & args] & body]
   `(locking db-lock
-     (let [~sym (start-db! ~@args)]
-       (try
-         ~@body
-         (finally
-           (d/release ~sym))))))
+     (if-let [conn# ~(when (empty? args) `@db-conn)]
+       (let [~sym conn#]
+         ~@body)
+       (let [~sym (start-db! ~@args)]
+         ~(when (empty? args) `(reset! db-conn ~sym))
+         (try
+           ~@body
+           (finally
+             ~(when (empty? args) `(reset! db-conn nil))
+             (d/release ~sym)))))))
 
 (defn gc! [node]
   (when (not= :memory (get-in (d/db node) [:config :store :backend]))

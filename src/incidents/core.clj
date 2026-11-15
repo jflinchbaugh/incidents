@@ -55,20 +55,21 @@
 
 (defn server [[ingest-seconds clerk-seconds output-dir]]
   (tel/log! :info "Starting server.")
-  (let [load-schedule (chime/chime-at
-                       (chime/periodic-seq
-                        (tc/now)
-                        (tc/of-seconds (parse-long ingest-seconds)))
-                       (fn [time]
-                         (db/with-db [node]
-                           (load-and-report node [output-dir]))))
-        clerk-schedule (chime/chime-at
-                        (chime/periodic-seq
-                         (tc/now)
-                         (tc/of-seconds (parse-long clerk-seconds)))
-                        (fn [time]
-                          (report/build-clerk! output-dir)))]
-    (wait-forever)))
+  (db/with-shared-db []
+    (let [load-schedule (chime/chime-at
+                         (chime/periodic-seq
+                          (tc/now)
+                          (tc/of-seconds (parse-long ingest-seconds)))
+                         (fn [time]
+                           (db/with-db [node]
+                             (load-and-report node [output-dir]))))
+          clerk-schedule (chime/chime-at
+                          (chime/periodic-seq
+                           (tc/now)
+                           (tc/of-seconds (parse-long clerk-seconds)))
+                          (fn [time]
+                            (report/build-clerk! output-dir)))]
+      (wait-forever))))
 
 (def connected-report-actions
   {"report-active"
