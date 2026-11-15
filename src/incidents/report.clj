@@ -5,7 +5,7 @@
             [hiccup.page :as p]
             [hiccup.util :as u]
             [nextjournal.clerk :as clerk]
-            [taoensso.telemere :as log]
+            [taoensso.telemere :as tel]
             [tick.core :as tc]))
 
 (defn format-date-part [fmt d]
@@ -129,7 +129,7 @@
 
 (defn log-lines [s]
   (doseq [line (str/split s #"\n")]
-    (log/log! :info line)))
+    (tel/log! :info line)))
 
 (defn build-clerk! [out-path]
   (->

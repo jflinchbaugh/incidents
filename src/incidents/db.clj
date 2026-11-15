@@ -3,13 +3,13 @@
             [clojure.java.io :as io]
             [datahike.api :as d]
             [incidents.parse :as parse]
-            [taoensso.telemere :as log]
+            [taoensso.telemere :as tel]
             [taoensso.trove :as trove]
             [taoensso.trove.telemere :as trove-telemere]
             [tick.core :as tc]))
 
 (trove/set-log-fn! (trove-telemere/get-log-fn))
-(log/set-ns-filter! #{"incidents.*"})
+(tel/set-ns-filter! #{"incidents.*"})
 
 (def schema
   [{:db/ident :incidents.feed/id
@@ -159,7 +159,7 @@
    (put-feed! node (tc/now) feed))
   ([node instant feed]
    (if (= feed (:doc (get-last-feed node)))
-     (log/log!
+     (tel/log!
       {:level :info
        :data {:feed-unchanged instant}})
      (->>
@@ -244,7 +244,7 @@
         new-uris (set (map :uri new-facts))
         updated-facts (remove (set active-facts) new-facts)
         ended-facts (remove (comp new-uris :uri) active-facts)]
-    (log/log!
+    (tel/log!
      {:level :info
       :data {:found (count active-facts)
              :updating (count updated-facts)
@@ -320,7 +320,7 @@
                           :limit feed-batch-size}
                          (d/db node)))]
       (if (seq ids)
-        (let [_ (log/log!
+        (let [_ (tel/log!
                  {:level :info
                   :data {:retracting (count ids)
                          :attr attr
@@ -356,7 +356,7 @@
      (let [instant (tc/instant date)]
        (if (= doc last-doc)
          (do
-           (log/log!
+           (tel/log!
             {:level :info
              :data {:feed-unchanged instant}})
            (changed-feeds last-doc more))
@@ -376,7 +376,7 @@
                        (pmap (fn [batch]
                                [batch (make-feeds-tx batch)])))]
       (doseq [[idx [batch tx-data]] (map-indexed vector batches)]
-        (log/log!
+        (tel/log!
          {:level :info
           :data {:importing (count batch)
                  :date (:date (first batch))}})

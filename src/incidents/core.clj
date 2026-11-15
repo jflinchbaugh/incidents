@@ -4,7 +4,7 @@
             [clojure.string :as str]
             [incidents.db :as db]
             [incidents.report :as report]
-            [taoensso.telemere :as log]
+            [taoensso.telemere :as tel]
             [tick.core :as tc]))
 
 (def feed-url "https://webcad.lcwc911.us/Pages/Public/LiveIncidentsFeed.aspx")
@@ -32,13 +32,13 @@
    "export"
    (fn [node [file]]
      (if (str/blank? file)
-       (log/log! :info "export <file>")
+       (tel/log! :info "export <file>")
        (db/export-feeds! node file)))
 
    "import"
    (fn [node [file]]
      (if (str/blank? file)
-       (log/log! :info "import <file>")
+       (tel/log! :info "import <file>")
        (db/import-feeds! node file)))})
 
 (defn load-and-report [node [output-dir]]
@@ -54,7 +54,7 @@
   (loop [] (Thread/sleep java.lang.Integer/MAX_VALUE) (recur)))
 
 (defn server [[ingest-seconds clerk-seconds output-dir]]
-  (log/log! :info "Starting server.")
+  (tel/log! :info "Starting server.")
   (let [load-schedule (chime/chime-at
                        (chime/periodic-seq
                         (tc/now)
@@ -86,13 +86,13 @@
    (fn [args]
      (let [[output-dir] args]
        (if (str/blank? output-dir)
-         (log/log! :info "clerk <output-dir>")
+         (tel/log! :info "clerk <output-dir>")
          (report/build-clerk! output-dir))))
 
    "server"
    (fn [args]
      (if (str/blank? (first args))
-       (log/log! :info "server <ingest-seconds> <clerk-seconds> <output-dir>")
+       (tel/log! :info "server <ingest-seconds> <clerk-seconds> <output-dir>")
        (server args)))})
 
 (defn -main [& args]
@@ -110,12 +110,12 @@
 
       connected-report-action
       (if (str/blank? (first args))
-        (log/log! :info ["Usage:" action "<output-dir>"])
+        (tel/log! :info ["Usage:" action "<output-dir>"])
         (db/with-db [node]
           (connected-report-action node args)))
 
       :else
-      (log/log!
+      (tel/log!
        :info
        ["Usage:"
         (->>
