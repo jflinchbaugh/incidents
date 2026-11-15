@@ -284,3 +284,25 @@
           (with-redefs [feed-url (io/resource "incidents/feed-2.xml")]
             (load-fn (tc/now))
             (t/is (= 4 (clerk-fn (tc/now))))))))))
+
+(t/deftest test-gc
+  (with-tmp-dir tmp-dir
+    (let [db-dir (io/file tmp-dir "db")
+          file-cfg (-> db-config
+                       (assoc-in [:store :path] (str db-dir))
+                       (assoc-in [:store :id] (java.util.UUID/randomUUID)))
+          ksv-count (fn []
+                      (count
+                       (filter
+                        (fn [f] (str/ends-with? (.getName f) ".ksv"))
+                        (.listFiles db-dir))))]
+      (with-db [node file-cfg]
+        (let [base-files (ksv-count)]
+          (doseq [i (range 10)]
+            (put-feed!
+             node
+             (tc/>> (tc/epoch) (tc/new-duration i :minutes))
+             (str "feed-" i)))
+          ((get connected-actions "purge-feeds") node nil)
+          ((get connected-actions "gc") node nil)
+          (t/is (<= (ksv-count) (+ base-files 2))))))))

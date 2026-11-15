@@ -55,6 +55,9 @@
            :id #uuid "7c9e6679-7425-40de-944b-e07fc1f90ae7"}
    :schema-flexibility :read
    :keep-history? false
+   :commit-graph? false
+   :online-gc {:enabled? true
+               :grace-period-ms 0}
    :max-string-length 0
    :initial-tx schema})
 
@@ -76,6 +79,10 @@
          ~@body
          (finally
            (d/release ~sym))))))
+
+(defn gc! [node]
+  (when (not= :memory (get-in (d/db node) [:config :store :backend]))
+    @(d/gc-storage node (java.util.Date.) {:min-age-ms 0})))
 
 (defn tag [type rec]
   (assoc rec :type type))
@@ -158,11 +165,15 @@
          (d/entity db)
          keys->mem)))))
 
+(defn make-feeds-tx [feeds]
+  (let [db-feeds (mapv (partial keys->db "incidents.feed") feeds)]
+    (conj db-feeds
+          {:incidents.feed/id :incidents.feed/last-feed
+           :incidents.feed/feed-date
+           (:incidents.feed/date (peek db-feeds))})))
+
 (defn make-feed-tx [feed]
-  (let [db-feed (keys->db "incidents.feed" feed)]
-    [db-feed
-     {:incidents.feed/id :incidents.feed/last-feed
-      :incidents.feed/feed-date (:incidents.feed/date db-feed)}]))
+  (make-feeds-tx [feed]))
 
 (defn put-feed!
   ([node feed]
@@ -562,7 +573,9 @@
                   (mapv (fn [id] [:db/retractEntity id]))
                   (d/transact node))]
           (recur (conj txs tx)))
-        txs))))
+        (do
+          (gc! node)
+          txs)))))
 
 (defn delete-all-facts! [node]
   (evict-all! node :incidents.fact/type :fact))
@@ -580,14 +593,29 @@
       (doseq [feed (get-feeds-since node 0)]
         (prn (select-keys feed [:date :doc]))))))
 
+(defn changed-feeds [last-doc entries]
+  (lazy-seq
+   (when-let [[{:keys [date doc]} & more] (seq entries)]
+     (let [instant (tc/instant date)]
+       (if (= doc last-doc)
+         (do
+           (log/info (str "Feed unchanged, saving nothing for " instant))
+           (changed-feeds last-doc more))
+         (cons (tag :feed (make-feed-rec instant doc))
+               (changed-feeds doc more)))))))
+
 (defn import-feeds! [node file]
   (with-open [in (-> file
                      io/input-stream
                      java.util.zip.GZIPInputStream.
                      io/reader)]
-    (doseq [line (line-seq in)]
-      (let [{:keys [date doc]} (edn/read-string line)]
-        (put-feed! node (tc/instant date) doc)))))
+    (let [entries (map edn/read-string (line-seq in))
+          last-doc (:doc (get-last-feed node))]
+      (doseq [batch (->> entries
+                         (changed-feeds last-doc)
+                         (partition-all feed-batch-size))]
+        (d/transact node (make-feeds-tx batch))
+        (gc! node)))))
 
 (defn delete-all-feeds! [node]
   (d/transact
@@ -610,6 +638,10 @@
    "purge-feeds"
    (fn [node _]
      (delete-all-feeds! node))
+
+   "gc"
+   (fn [node _]
+     (gc! node))
 
    "export"
    (fn [node [file]]
