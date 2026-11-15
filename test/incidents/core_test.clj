@@ -8,7 +8,7 @@
             [clojure.java.io :as io]
             [test-with-files.tools :refer [with-tmp-dir]]
             [clojure.string :as str]
-            [taoensso.timbre :as log]))
+            [taoensso.telemere :as log]))
 
 (t/deftest test-parse
   (t/testing "parse null values"
@@ -259,7 +259,7 @@
           (t/is (str/includes?
                  (with-out-str
                    ((get connected-actions "import") node [file]))
-                 (str "Importing 2 for " t1)))
+                 (pr-str {:importing 2 :date (str t1)})))
           (t/is (= orig-feeds (get-feeds-since node 0)))
           ((get connected-actions "purge-feeds") node nil)
           (with-open [out (-> file
@@ -329,8 +329,10 @@
            :ignored)))))
   (t/is
    (str/includes?
-    (log/with-merged-config
-      {:min-level :debug :ns-filter #{"datahike.*"}}
-      (with-out-str
-        (with-db [node (mem-db-config)])))
+    (log/with-ns-filter
+      #{"datahike.*"}
+      (log/with-min-level
+        :debug
+        (with-out-str
+          (with-db [node (mem-db-config)]))))
     ":datahike/connect")))

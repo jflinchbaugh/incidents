@@ -6,17 +6,17 @@
             [chime.core :as chime]
             [datahike.api :as d]
             [tick.core :as tc]
-            [taoensso.timbre :as log]
+            [taoensso.telemere :as log]
             [clojure.string :as str]
             [hiccup.page :as p]
             [hiccup.element :as e]
             [hiccup.util :as u]
             [nextjournal.clerk :as clerk]
             [taoensso.trove :as trove]
-            [taoensso.trove.timbre :as trove-timbre]))
+            [taoensso.trove.telemere :as trove-telemere]))
 
-(trove/set-log-fn! (trove-timbre/get-log-fn))
-(log/merge-config! {:ns-filter #{"incidents.*"}})
+(trove/set-log-fn! (trove-telemere/get-log-fn))
+(log/set-ns-filter! #{"incidents.*"})
 
 (def feed-url "https://webcad.lcwc911.us/Pages/Public/LiveIncidentsFeed.aspx")
 
@@ -183,7 +183,9 @@
    (put-feed! node (tc/now) feed))
   ([node instant feed]
    (if (= feed (:doc (get-last-feed node)))
-     (log/info (str "Feed unchanged, saving nothing for " instant))
+     (log/log!
+      {:level :info
+       :data {:feed-unchanged instant}})
      (->>
       feed
       (make-feed-rec instant)
@@ -364,15 +366,12 @@
         new-uris (set (map :uri new-facts))
         updated-facts (remove (set active-facts) new-facts)
         ended-facts (remove (comp new-uris :uri) active-facts)]
-    (log/info
-     "Found"
-     (count active-facts)
-     "Updating"
-     (count updated-facts)
-     "Ending"
-     (count ended-facts)
-     "for"
-     (:date feed))
+    (log/log!
+     {:level :info
+      :data {:found (count active-facts)
+             :updating (count updated-facts)
+             :ending (count ended-facts)
+             :date (:date feed)}})
     {:active-facts new-facts
      :tx-ops (vec
               (concat
@@ -554,7 +553,7 @@
 
 (defn log-lines [s]
   (doseq [line (str/split s #"\n")]
-    (log/info line)))
+    (log/log! :info line)))
 
 (defn build-clerk! [out-path]
   (->
@@ -572,7 +571,11 @@
                           :limit feed-batch-size}
                          (d/db node)))]
       (if (seq ids)
-        (let [_ (log/info "Retracting" (count ids) "for" attr val)
+        (let [_ (log/log!
+                 {:level :info
+                  :data {:retracting (count ids)
+                         :attr attr
+                         :val val}})
               tx (->>
                   ids
                   (mapv (fn [id] [:db/retractEntity id]))
@@ -604,7 +607,9 @@
      (let [instant (tc/instant date)]
        (if (= doc last-doc)
          (do
-           (log/info (str "Feed unchanged, saving nothing for " instant))
+           (log/log!
+            {:level :info
+             :data {:feed-unchanged instant}})
            (changed-feeds last-doc more))
          (cons (tag :feed (make-feed-rec instant doc))
                (changed-feeds doc more)))))))
@@ -622,7 +627,10 @@
                        (pmap (fn [batch]
                                [batch (make-feeds-tx batch)])))]
       (doseq [[idx [batch tx-data]] (map-indexed vector batches)]
-        (log/info "Importing" (count batch) "for" (:date (first batch)))
+        (log/log!
+         {:level :info
+          :data {:importing (count batch)
+                 :date (:date (first batch))}})
         (d/transact node tx-data)
         (when (zero? (mod (inc idx) gc-batch-interval))
           (gc! node)))
@@ -657,13 +665,13 @@
    "export"
    (fn [node [file]]
      (if (str/blank? file)
-       (log/info "export <file>")
+       (log/log! :info "export <file>")
        (export-feeds! node file)))
 
    "import"
    (fn [node [file]]
      (if (str/blank? file)
-       (log/info "import <file>")
+       (log/log! :info "import <file>")
        (import-feeds! node file)))})
 
 (defn load-and-report [node [output-dir]]
@@ -679,7 +687,7 @@
   (loop [] (Thread/sleep java.lang.Integer/MAX_VALUE) (recur)))
 
 (defn server [[ingest-seconds clerk-seconds output-dir]]
-  (log/info "Starting server.")
+  (log/log! :info "Starting server.")
   (let [load-schedule (chime/chime-at
                        (chime/periodic-seq
                         (tc/now)
@@ -711,13 +719,13 @@
    (fn [args]
      (let [[output-dir] args]
        (if (str/blank? output-dir)
-         (log/info "clerk <output-dir>")
+         (log/log! :info "clerk <output-dir>")
          (build-clerk! output-dir))))
 
    "server"
    (fn [args]
      (if (str/blank? (first args))
-       (log/info "server <ingest-seconds> <clerk-seconds> <output-dir>")
+       (log/log! :info "server <ingest-seconds> <clerk-seconds> <output-dir>")
        (server args)))})
 
 (defn -main [& args]
@@ -735,18 +743,19 @@
 
       connected-report-action
       (if (str/blank? (first args))
-        (log/info "Usage:" action "<output-dir>")
+        (log/log! :info ["Usage:" action "<output-dir>"])
         (with-db [node]
           (connected-report-action node args)))
 
       :else
-      (log/info
-       "Usage:"
-       (->>
-        [connected-actions connected-report-actions disconnected-actions]
-        (map keys)
-        (apply concat)
-        (str/join "|")))))
+      (log/log!
+       :info
+       ["Usage:"
+        (->>
+         [connected-actions connected-report-actions disconnected-actions]
+         (map keys)
+         (apply concat)
+         (str/join "|"))])))
   (shutdown-agents))
 
 (comment
