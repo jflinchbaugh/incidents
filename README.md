@@ -46,3 +46,27 @@ $ ./run.sh import feeds.edn.gz
 $ ./run.sh reset
 $ ./run.sh load
 ```
+
+## Libraries
+
+- **Datahike** (`org.replikativ/datahike`): Embedded Datalog database used in
+  `incidents.db` to store raw RSS feeds, derived incident facts, and feed
+  timestamps, plus storage garbage collection.
+- **feedparser-clj** (`org.clojars.gnzh/feedparser-clj`): Parses the LCWC911
+  RSS/Atom XML feed and its entries into Clojure maps in `incidents.parse`.
+- **Chime** (`jarohen/chime`): Periodic scheduler used in `incidents.core`
+  for recurring feed ingestion and Clerk notebook builds.
+- **Tick** (`tick/tick`): Date and time library used for feed timestamps,
+  incident durations, report formatting, and schedule periods.
+- **Hiccup** (`hiccup/hiccup`): HTML5 generation and Google Maps URL building
+  for the active incidents report page in `incidents.report`.
+- **Clerk** (`io.github.nextjournal/clerk`): Interactive and static HTML
+  notebook rendering (`notebooks/incidents.clj`) with tables and Plotly
+  charts, built and served via `incidents.report`.
+- **Telemere / Trove** (`com.taoensso/telemere`,
+  `com.taoensso/telemere-slf4j`, `com.taoensso/trove`): Structured
+  application logging and namespace filtering; `taoensso.trove.telemere`
+  routes Datahike's Trove logs and `telemere-slf4j` routes SLF4J logs
+  through Telemere.
+- **test-with-files** (`com.magnars/test-with-files`): Temporary directory
+  fixtures (`with-tmp-dir`) used across the unit test suite.
