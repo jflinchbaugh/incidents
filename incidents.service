@@ -1,6 +1,5 @@
 [Unit]
 Description=Incidents
-After=xtdb.target
 
 [Service]
 Type=simple

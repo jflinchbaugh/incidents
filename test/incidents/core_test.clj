@@ -3,7 +3,8 @@
             [clojure.test :as t]
             [feedparser-clj.core :as feed]
             [tick.core :as tc]
-            [xtdb.api :as xt]
+            [datahike.api :as d]
+            [chime.core :as chime]
             [clojure.java.io :as io]
             [test-with-files.tools :refer [with-tmp-dir]]
             [clojure.string :as str]))
@@ -89,25 +90,20 @@
 (t/deftest test-tag
   (t/is (= {:thing :value :type :fact} (tag :fact {:thing :value}))))
 
-(t/deftest test-add-fact-id
-  (t/is (=
-         {:thing :value :uri "uri" :xt/id {:type :fact :uri "uri"}}
-         (add-fact-id {:thing :value :uri "uri"}))))
-
-(t/deftest test-add-feed-id
-  (t/is (=
-          {:thing :value :uri "uri" :date "time" :xt/id {:type :feed :date "time"}}
-          (add-feed-id {:thing :value :uri "uri" :date "time"}))))
+(defn mem-db-config []
+  (assoc db-config
+         :store {:backend :memory
+                 :id (java.util.UUID/randomUUID)}))
 
 (t/deftest test-prune
   (t/is (=
          {:thing :value
           :uri "uri"
-          :xt/id {:type :fact :uri "uri" :empty ""}}
+          :nested {:type :fact :uri "uri" :empty ""}}
          (prune
           {:thing :value
            :uri "uri"
-           :xt/id {:type :fact :uri "uri" :empty ""}
+           :nested {:type :fact :uri "uri" :empty ""}
            :empty-str ""
            :empty-list []
            :empty-map {}
@@ -125,7 +121,7 @@
            (end now {:key :val :start-date start-time})))))
 
 (t/deftest test-everything
-  (with-open [node (xt/start-node {})]
+  (with-db [node (mem-db-config)]
     (t/is node "the node is open")
 
     (load-feed! node (io/resource "incidents/feed-1.xml"))
@@ -150,14 +146,14 @@
     (t/is (= 4 (count (get-all-facts node))) "facts are loaded from staging")
     (t/is (= 3 (count (get-all-active-facts node))) "active facts updated")
 
-    (let [fact-id (:xt/id (first (get-all-facts node)))]
+    (let [fact-uri (:uri (first (get-all-facts node)))]
       (with-redefs [feed-batch-size 2]
         (t/is (= 2 (count (delete-all-facts! node)))
           "evicts facts in batches"))
       ((get connected-actions "reset") node nil)
       (t/is (empty? (get-all-facts node)) "reset clears facts")
-      (t/is (empty? (xt/entity-history (xt/db node) fact-id :asc))
-        "reset evicts fact history")
+      (t/is (nil? (d/entity (d/db node) [:incidents.fact/uri fact-uri]))
+        "reset retracts fact entity")
       (t/is (= 0 (get-last-feed-time node)) "reset clears last-feed-time"))
 
     (t/is (= 2 (count (transform-facts! node))) "reprocess fact transactions")
@@ -185,11 +181,19 @@
          (keys->mem))))))
 
 (t/deftest test-xtdb
-  (with-open [node (xt/start-node {})]
+  (with-db [node (mem-db-config)]
     (t/is node "node is open")
     (t/is (put-feed! node {:doc ""}))
     (t/is (nil? (put-feed! node {:doc ""})))
-    (t/is (= 1 (count (get-feeds-since node 0))))))
+    (t/is (= 1 (count (get-feeds-since node 0)))))
+  (with-tmp-dir tmp-dir
+    (let [file-cfg (-> db-config
+                       (assoc-in [:store :path] (str (io/file tmp-dir "db")))
+                       (assoc-in [:store :id] (java.util.UUID/randomUUID)))]
+      (with-db [node file-cfg]
+        (t/is (put-feed! node {:doc "persisted"})))
+      (with-db [node file-cfg]
+        (t/is (= 1 (count (get-feeds-since node 0))))))))
 
 (t/deftest test-parse-feed
   (let [source (->>
@@ -215,7 +219,7 @@
     :fire "Standby-Transfer"))
 
 (t/deftest test-last-feed-time
-  (with-open [node (xt/start-node {})]
+  (with-db [node (mem-db-config)]
     (let [now (unix-time (tc/now))
           earlier (- now 1)
           _ (put-last-feed-time! node earlier)
@@ -224,7 +228,7 @@
 
 (t/deftest test-export-import
   (with-tmp-dir tmp-dir
-    (with-open [node (xt/start-node {})]
+    (with-db [node (mem-db-config)]
       (let [t1 (tc/instant "2022-08-11T03:40:00Z")
             t2 (tc/instant "2022-08-11T03:45:00Z")
             t3 (tc/instant "2022-08-11T03:50:00Z")
@@ -241,10 +245,9 @@
                                node
                                nil)))))
           (t/is (empty? (get-feeds-since node 0)))
-          (t/is (empty? (xt/entity-history
-                         (xt/db node)
-                         (:xt/id (first orig-feeds))
-                         :asc)))
+          (t/is (nil? (d/entity
+                       (d/db node)
+                       [:incidents.feed/date (:date (first orig-feeds))])))
           ((get connected-actions "import") node [file])
           (t/is (= orig-feeds (get-feeds-since node 0)))
           ((get connected-actions "purge-feeds") node nil)
@@ -258,3 +261,26 @@
               (prn {:date (str t3) :doc doc-2})))
           ((get connected-actions "import") node [file])
           (t/is (= orig-feeds (get-feeds-since node 0))))))))
+
+(t/deftest test-server
+  (with-tmp-dir tmp-dir
+    (let [file-cfg (-> db-config
+                       (assoc-in [:store :path] (str (io/file tmp-dir "db")))
+                       (assoc-in [:store :id] (java.util.UUID/randomUUID)))
+          out-dir (str (io/file tmp-dir "out"))
+          schedules (atom [])]
+      (with-redefs [db-config file-cfg
+                    feed-url (io/resource "incidents/feed-1.xml")
+                    chime/chime-at (fn [_ f] (swap! schedules conj f) nil)
+                    wait-forever (fn [] nil)
+                    build-clerk! (fn [_]
+                                   (with-db [node]
+                                     (count (get-all-facts node))))]
+        ((get disconnected-actions "server") ["60" "300" out-dir])
+        (t/is (= 2 (count @schedules)))
+        (let [[load-fn clerk-fn] @schedules]
+          (load-fn (tc/now))
+          (t/is (= 3 (clerk-fn (tc/now))))
+          (with-redefs [feed-url (io/resource "incidents/feed-2.xml")]
+            (load-fn (tc/now))
+            (t/is (= 4 (clerk-fn (tc/now))))))))))

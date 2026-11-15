@@ -4,13 +4,12 @@
   (:require
    [nextjournal.clerk :as clerk]
    [nextjournal.clerk.viewer :as v]
-   [xtdb.api :as xt]
    [incidents.core :refer :all]
    [clojure.string :as str]))
 
 ^{:nextjournal.clerk/visibility {:code :hide :result :hide}}
 ^::clerk/no-cache
-(def incidents (with-open [node (start-xtdb!)]
+(def incidents (with-db [node]
                  (->> node
                       get-all-facts
                       (sort-by :duration-minutes)
