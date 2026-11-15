@@ -5,6 +5,8 @@
    [nextjournal.clerk :as clerk]
    [nextjournal.clerk.viewer :as v]
    [incidents.core :refer :all]
+   [incidents.db :refer :all]
+   [incidents.report :refer :all]
    [clojure.string :as str]))
 
 ^{:nextjournal.clerk/visibility {:code :hide :result :hide}}
