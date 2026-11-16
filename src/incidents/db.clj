@@ -128,7 +128,7 @@
              (d/release ~sym)))))))
 
 (defn gc! [node]
-  (when (not= :memory (get-in (d/db node) [:config :store :backend]))
+  #_(when (not= :memory (get-in (d/db node) [:config :store :backend]))
     @(d/gc-storage
       node
       (java.util.Date.)
