@@ -160,6 +160,11 @@
              (str "feed-" i)))
           (delete-all-feeds! node)
           (gc! node)
+          (t/is (> (ksv-count) (+ base-files 2)))
+          (with-redefs [db-config (assoc-in db-config
+                                            [:online-gc :grace-period-ms]
+                                            0)]
+            (gc! node))
           (t/is (<= (ksv-count) (+ base-files 2))))))))
 
 (t/deftest test-datahike-logging

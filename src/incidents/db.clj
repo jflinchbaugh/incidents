@@ -51,7 +51,7 @@
    :keep-history? false
    :commit-graph? false
    :online-gc {:enabled? true
-               :grace-period-ms 0}
+               :grace-period-ms 60000}
    :max-string-length 0
    :initial-tx schema})
 
@@ -96,7 +96,10 @@
 
 (defn gc! [node]
   (when (not= :memory (get-in (d/db node) [:config :store :backend]))
-    @(d/gc-storage node (java.util.Date.) {:min-age-ms 0})))
+    @(d/gc-storage
+      node
+      (java.util.Date.)
+      {:min-age-ms (get-in db-config [:online-gc :grace-period-ms])})))
 
 (defn keys->db [namespace mem-record]
   (update-keys
