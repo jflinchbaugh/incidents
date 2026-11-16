@@ -358,7 +358,7 @@
                            active-facts
                            feeds)
                 next-batch-num (inc batch-num)]
-            (when (zero? (mod next-batch-num gc-batch-interval))
+            #_(when (zero? (mod next-batch-num gc-batch-interval))
               (gc! node))
             {:active-facts (:active-facts batch-res)
              :txs (into txs (:txs batch-res))
