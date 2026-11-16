@@ -128,7 +128,7 @@
              (d/release ~sym)))))))
 
 (defn gc! [node]
-  #_(when (not= :memory (get-in (d/db node) [:config :store :backend]))
+  (when (not= :memory (get-in (d/db node) [:config :store :backend]))
     @(d/gc-storage
       node
       (java.util.Date.)
@@ -387,7 +387,7 @@
                   (d/transact node))]
           (recur (conj txs tx)))
         (do
-          (gc! node)
+          #_(gc! node)
           txs)))))
 
 (defn delete-all-facts! [node]
@@ -437,9 +437,9 @@
           :data {:importing (count batch)
                  :date (:date (first batch))}})
         (d/transact node tx-data)
-        (when (zero? (mod (inc idx) gc-batch-interval))
+        #_(when (zero? (mod (inc idx) gc-batch-interval))
           (gc! node)))
-      (gc! node))))
+      #_(gc! node))))
 
 (defn delete-all-feeds! [node]
   (d/transact
