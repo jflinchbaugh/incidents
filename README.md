@@ -49,10 +49,11 @@ $ ./run.sh load
 
 ## Libraries
 
-- **Datahike** (`org.replikativ/datahike`, `org.replikativ/datahike-lmdb`):
-  Embedded Datalog database with LMDB storage backend used in `incidents.db` to
-  store raw RSS feeds, derived incident facts, and feed timestamps, plus storage
-  garbage collection.
+- **Datahike** (`org.replikativ/datahike`, `org.replikativ/konserve-jdbc`,
+  `org.xerial/sqlite-jdbc`):
+  Embedded Datalog database with SQLite storage backend used in `incidents.db`
+  to store raw RSS feeds, derived incident facts, and feed timestamps, plus
+  storage garbage collection.
 - **feedparser-clj** (`org.clojars.gnzh/feedparser-clj`): Parses the LCWC911
   RSS/Atom XML feed and its entries into Clojure maps in `incidents.parse`.
 - **Chime** (`jarohen/chime`): Periodic scheduler used in `incidents.core`

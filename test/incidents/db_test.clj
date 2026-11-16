@@ -13,6 +13,13 @@
          :store {:backend :memory
                  :id (java.util.UUID/randomUUID)}))
 
+(defn delete-sqlite-files! [file-or-path]
+  (let [base (str file-or-path)]
+    (doseq [ext ["" "-wal" "-shm"]]
+      (let [f (io/file (str base ext))]
+        (when (.exists f)
+          (try (.delete f) (catch Throwable _ nil)))))))
+
 (t/deftest test-everything
   (with-db [node (mem-db-config)]
     (t/is node "the node is open")
@@ -80,7 +87,7 @@
          (keys->db "incidents.feed")
          (keys->mem))))))
 
-(t/deftest test-xtdb
+(t/deftest test-schema-and-deduplication
   (with-db [node (mem-db-config)]
     (t/is node "node is open")
     (t/is (:fuse-index-roots? (:config (d/db node))))
@@ -91,29 +98,23 @@
                    (d/transact node [{:incidents.feed/unknown "x"}])))
     (t/is (put-feed! node ""))
     (t/is (nil? (put-feed! node "")))
-    (t/is (= 1 (count (get-feeds-since node 0)))))
-  (with-tmp-dir tmp-dir
-    (let [file-cfg (-> db-config
-                       (assoc-in [:store :path] (str (io/file tmp-dir "db")))
-                       (assoc-in [:store :id] (java.util.UUID/randomUUID)))]
-      (with-db [node file-cfg]
-        (t/is (put-feed! node "persisted")))
-      (with-db [node file-cfg]
-        (t/is (= 1 (count (get-feeds-since node 0))))))))
+    (t/is (= 1 (count (get-feeds-since node 0))))))
 
-(t/deftest test-lmdb-storage
+(t/deftest test-sqlite-storage
   (with-tmp-dir tmp-dir
-    (let [lmdb-dir (io/file tmp-dir "lmdb")
-          lmdb-cfg (-> db-config
-                       (assoc :store {:backend :lmdb
-                                      :path (str lmdb-dir)
-                                      :id (java.util.UUID/randomUUID)}))]
-      (with-db [node lmdb-cfg]
-        (t/is (put-feed! node "lmdb-persisted")))
-      (t/is (.exists (io/file lmdb-dir "data.mdb"))
-            "LMDB data file was created")
-      (with-db [node lmdb-cfg]
-        (t/is (= 1 (count (get-feeds-since node 0))))))))
+    (let [sqlite-file (io/file tmp-dir "data.sqlite")
+          sqlite-cfg (-> db-config
+                         (assoc :store {:backend :jdbc
+                                        :dbtype "sqlite"
+                                        :dbname (str sqlite-file)
+                                        :id (java.util.UUID/randomUUID)}))]
+      (with-db [node sqlite-cfg]
+        (t/is (put-feed! node "sqlite-persisted")))
+      (t/is (.exists sqlite-file)
+            "SQLite data file was created")
+      (with-db [node sqlite-cfg]
+        (t/is (= 1 (count (get-feeds-since node 0)))))
+      (delete-sqlite-files! sqlite-file))))
 
 (t/deftest test-last-feed-time
   (with-db [node (mem-db-config)]
@@ -220,3 +221,31 @@
           (t/is (nil? (load-feed! node empty-file)))
           (t/is (empty? (get-feeds-since node 0))
                 "no empty feed was transacted"))))))
+
+(t/deftest test-sqlite-tuning
+  (with-tmp-dir tmp-dir
+    (let [sqlite-file (io/file tmp-dir "tuned.sqlite")
+          sqlite-cfg (-> db-config
+                         (assoc :store {:backend :jdbc
+                                        :dbtype "sqlite"
+                                        :dbname (str sqlite-file)
+                                        :id (java.util.UUID/randomUUID)}))]
+      (with-db [node sqlite-cfg]
+        (t/is (put-feed! node "sample-feed")))
+      (let [conn (java.sql.DriverManager/getConnection
+                  (sqlite-jdbc-url sqlite-file))]
+        (with-open [stmt (.createStatement conn)]
+          (let [get-val (fn [q]
+                          (with-open [rs (.executeQuery stmt q)]
+                            (.next rs)
+                            (.getObject rs 1)))]
+            (t/is (= 2 (.intValue (get-val "PRAGMA auto_vacuum;"))))
+            (t/is (= "wal" (.toLowerCase
+                            (str (get-val "PRAGMA journal_mode;")))))
+            (t/is (= 1 (.intValue (get-val "PRAGMA synchronous;"))))
+            (t/is (= 67108864
+                     (.longValue
+                      (get-val "PRAGMA journal_size_limit;"))))))
+        (.close conn))
+      (t/is (nil? (vacuum! sqlite-cfg)))
+      (delete-sqlite-files! sqlite-file))))

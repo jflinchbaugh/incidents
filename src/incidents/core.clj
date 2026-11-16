@@ -27,7 +27,8 @@
 
    "gc"
    (fn [node _]
-     (db/gc! node))
+     (db/gc! node)
+     (db/vacuum!))
 
    "export"
    (fn [node [file]]

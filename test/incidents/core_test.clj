@@ -10,9 +10,12 @@
 
 (t/deftest test-server
   (with-tmp-dir tmp-dir
-    (let [file-cfg (-> db/db-config
-                       (assoc-in [:store :path] (str (io/file tmp-dir "db")))
-                       (assoc-in [:store :id] (java.util.UUID/randomUUID)))
+    (let [sqlite-file (io/file tmp-dir "data.sqlite")
+          file-cfg (-> db/db-config
+                       (assoc :store {:backend :jdbc
+                                      :dbtype "sqlite"
+                                      :dbname (str sqlite-file)
+                                      :id (java.util.UUID/randomUUID)}))
           out-dir (str (io/file tmp-dir "out"))
           schedules (atom [])
           orig-start-db! db/start-db!
@@ -48,13 +51,19 @@
                                           (db/with-db [node]
                                             (count (db/get-all-facts node))))]
         ((get disconnected-actions "server") ["60" "300" out-dir])
-        (t/is (= 4 @start-count) "db is opened and closed per event")))))
+        (t/is (= 4 @start-count) "db is opened and closed per event"))
+      (doseq [ext ["" "-wal" "-shm"]]
+        (try (.delete (io/file (str sqlite-file ext)))
+             (catch Throwable _ nil))))))
 
 (t/deftest test-server-error-handler
   (with-tmp-dir tmp-dir
-    (let [file-cfg (-> db/db-config
-                       (assoc-in [:store :path] (str (io/file tmp-dir "db")))
-                       (assoc-in [:store :id] (java.util.UUID/randomUUID)))
+    (let [sqlite-file (io/file tmp-dir "data.sqlite")
+          file-cfg (-> db/db-config
+                       (assoc :store {:backend :jdbc
+                                      :dbtype "sqlite"
+                                      :dbname (str sqlite-file)
+                                      :id (java.util.UUID/randomUUID)}))
           out-dir (str (io/file tmp-dir "out"))
           options (atom [])]
       (with-redefs [db/db-config file-cfg

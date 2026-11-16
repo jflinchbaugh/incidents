@@ -3,7 +3,7 @@
             [clojure.java.io :as io]
             [clojure.string :as str]
             [datahike.api :as d]
-            [datahike-lmdb.core]
+            [konserve-jdbc.core :as k-jdbc]
             [incidents.parse :as parse]
             [taoensso.telemere :as tel]
             [taoensso.trove :as trove]
@@ -77,10 +77,10 @@
     :db/cardinality :db.cardinality/one}])
 
 (def db-config
-  {:store {:backend :lmdb
-           :path "data"
-           :id #uuid "7c9e6679-7425-40de-944b-e07fc1f90ae7"
-           :map-size (* 10 1024 1024 1024)}
+  {:store {:backend :jdbc
+           :dbtype "sqlite"
+           :dbname "data/data.sqlite"
+           :id #uuid "7c9e6679-7425-40de-944b-e07fc1f90ae7"}
    :schema-flexibility :write
    :attribute-refs? true
    :keep-history? false
@@ -91,13 +91,87 @@
    :max-string-length 0
    :initial-tx schema})
 
+(def sqlite-params
+  (str "journal_mode=WAL&synchronous=NORMAL&"
+       "journal_size_limit=67108864&busy_timeout=5000"))
+
+(defn sqlite-jdbc-url [dbname]
+  (str "jdbc:sqlite:" dbname "?" sqlite-params))
+
+(defn init-sqlite-file! [config]
+  (when (= "sqlite" (get-in config [:store :dbtype]))
+    (when-let [dbname (get-in config [:store :dbname])]
+      (let [f (io/file dbname)]
+        (io/make-parents f)
+        (when-not (.exists f)
+          (try
+            (let [conn (java.sql.DriverManager/getConnection
+                        (str "jdbc:sqlite:" dbname))]
+              (with-open [stmt (.createStatement conn)]
+                (.execute stmt "PRAGMA auto_vacuum = INCREMENTAL;")
+                (.execute stmt "PRAGMA journal_mode = WAL;"))
+              (.close conn))
+            (catch Throwable _ nil)))))))
+
+(defn configure-sqlite! [config]
+  (when (= "sqlite" (get-in config [:store :dbtype]))
+    (when-let [dbname (get-in config [:store :dbname])]
+      (when (.exists (io/file dbname))
+        (try
+          (let [conn (java.sql.DriverManager/getConnection
+                      (sqlite-jdbc-url dbname))]
+            (with-open [stmt (.createStatement conn)]
+              (.execute stmt "PRAGMA journal_mode = WAL;")
+              (.execute stmt "PRAGMA synchronous = NORMAL;")
+              (.execute stmt "PRAGMA journal_size_limit = 67108864;")
+              (.execute stmt "PRAGMA wal_autocheckpoint = 1000;")
+              (.execute stmt "PRAGMA busy_timeout = 5000;"))
+            (.close conn))
+          (catch Throwable _ nil))))))
+
+(defn vacuum!
+  ([]
+   (vacuum! db-config))
+  ([config]
+   (when (= "sqlite" (get-in config [:store :dbtype]))
+     (when-let [dbname (get-in config [:store :dbname])]
+       (when (.exists (io/file dbname))
+         (try
+           (let [conn (java.sql.DriverManager/getConnection
+                       (sqlite-jdbc-url dbname))]
+             (with-open [stmt (.createStatement conn)]
+               (.execute stmt "PRAGMA incremental_vacuum;"))
+             (.close conn))
+           (catch Throwable _ nil)))))))
+
 (defn start-db!
   ([]
    (start-db! db-config))
   ([config]
+   (when-let [dbname (get-in config [:store :dbname])]
+     (io/make-parents dbname))
+   (init-sqlite-file! config)
    (when-not (d/database-exists? config)
      (d/create-database config))
+   (configure-sqlite! config)
    (d/connect config)))
+
+(defn release-db!
+  ([conn]
+   (release-db! conn nil))
+  ([conn config]
+   (let [cfg (or config
+                 (try
+                   (get-in (d/db conn) [:config])
+                   (catch Throwable _ nil))
+                 db-config)]
+     (try
+       (d/release conn)
+       (finally
+         (when (= "sqlite" (get-in cfg [:store :dbtype]))
+           (try
+             (k-jdbc/release-pool! (:store cfg) :force? true)
+             (catch Throwable _ nil))))))))
 
 (def db-lock (Object.))
 
@@ -105,7 +179,8 @@
 
 (defmacro with-shared-db
   [[& args] & body]
-  `(let [conn# (locking db-lock
+  `(let [cfg# (or ~(first args) db-config)
+         conn# (locking db-lock
                  (let [c# (start-db! ~@args)]
                    (reset! db-conn c#)
                    c#))]
@@ -114,7 +189,7 @@
        (finally
          (locking db-lock
            (reset! db-conn nil)
-           (d/release conn#))))))
+           (release-db! conn# cfg#))))))
 
 (defmacro with-db
   [[sym & args] & body]
@@ -122,13 +197,14 @@
      (if-let [conn# ~(when (empty? args) `@db-conn)]
        (let [~sym conn#]
          ~@body)
-       (let [~sym (start-db! ~@args)]
+       (let [cfg# (or ~(first args) db-config)
+             ~sym (start-db! ~@args)]
          ~(when (empty? args) `(reset! db-conn ~sym))
          (try
            ~@body
            (finally
              ~(when (empty? args) `(reset! db-conn nil))
-             (d/release ~sym)))))))
+             (release-db! ~sym cfg#)))))))
 
 (defn gc! [node]
   (when (not= :memory (get-in (d/db node) [:config :store :backend]))
@@ -255,7 +331,7 @@
   (when-let [content (fetch-feed source)]
     (put-feed! node content)))
 
-(def feed-batch-size 100)
+(def feed-batch-size 1000)
 
 (def gc-batch-interval 10)
 
