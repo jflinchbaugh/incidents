@@ -83,15 +83,20 @@
 (t/deftest test-xtdb
   (with-db [node (mem-db-config)]
     (t/is node "node is open")
-    (t/is (put-feed! node {:doc ""}))
-    (t/is (nil? (put-feed! node {:doc ""})))
+    (t/is (:fuse-index-roots? (:config (d/db node))))
+    (t/is (number? (get-in (d/db node)
+                           [:ident-ref-map :incidents.feed/doc])))
+    (t/is (thrown? Exception
+                   (d/transact node [{:incidents.feed/unknown "x"}])))
+    (t/is (put-feed! node ""))
+    (t/is (nil? (put-feed! node "")))
     (t/is (= 1 (count (get-feeds-since node 0)))))
   (with-tmp-dir tmp-dir
     (let [file-cfg (-> db-config
                        (assoc-in [:store :path] (str (io/file tmp-dir "db")))
                        (assoc-in [:store :id] (java.util.UUID/randomUUID)))]
       (with-db [node file-cfg]
-        (t/is (put-feed! node {:doc "persisted"})))
+        (t/is (put-feed! node "persisted")))
       (with-db [node file-cfg]
         (t/is (= 1 (count (get-feeds-since node 0))))))))
 
@@ -145,7 +150,8 @@
     (let [db-dir (io/file tmp-dir "db")
           file-cfg (-> db-config
                        (assoc-in [:store :path] (str db-dir))
-                       (assoc-in [:store :id] (java.util.UUID/randomUUID)))
+                       (assoc-in [:store :id] (java.util.UUID/randomUUID))
+                       (assoc-in [:index-config :branching-factor] 8))
           ksv-count (fn []
                       (count
                        (filter

@@ -28,6 +28,15 @@
     :db/valueType :db.type/keyword
     :db/cardinality :db.cardinality/one
     :db/index true}
+   {:db/ident :incidents.feed/doc
+    :db/valueType :db.type/string
+    :db/cardinality :db.cardinality/one}
+   {:db/ident :incidents.feed/feed-time
+    :db/valueType :db.type/long
+    :db/cardinality :db.cardinality/one}
+   {:db/ident :incidents.feed/feed-date
+    :db/valueType :db.type/string
+    :db/cardinality :db.cardinality/one}
    {:db/ident :incidents.fact/uri
     :db/valueType :db.type/string
     :db/cardinality :db.cardinality/one
@@ -36,6 +45,27 @@
     :db/valueType :db.type/keyword
     :db/cardinality :db.cardinality/one
     :db/index true}
+   {:db/ident :incidents.fact/start-date
+    :db/valueType :db.type/instant
+    :db/cardinality :db.cardinality/one}
+   {:db/ident :incidents.fact/end-date
+    :db/valueType :db.type/instant
+    :db/cardinality :db.cardinality/one}
+   {:db/ident :incidents.fact/active?
+    :db/valueType :db.type/boolean
+    :db/cardinality :db.cardinality/one}
+   {:db/ident :incidents.fact/title
+    :db/valueType :db.type/string
+    :db/cardinality :db.cardinality/one}
+   {:db/ident :incidents.fact/municipality
+    :db/valueType :db.type/string
+    :db/cardinality :db.cardinality/one}
+   {:db/ident :incidents.fact/incident-type
+    :db/valueType :db.type/keyword
+    :db/cardinality :db.cardinality/one}
+   {:db/ident :incidents.fact/duration-minutes
+    :db/valueType :db.type/long
+    :db/cardinality :db.cardinality/one}
    {:db/ident :incidents.fact/streets
     :db/valueType :db.type/tuple
     :db/cardinality :db.cardinality/one}
@@ -47,9 +77,11 @@
   {:store {:backend :file
            :path "data"
            :id #uuid "7c9e6679-7425-40de-944b-e07fc1f90ae7"}
-   :schema-flexibility :read
+   :schema-flexibility :write
+   :attribute-refs? true
    :keep-history? false
    :commit-graph? false
+   :fuse-index-roots? true
    :online-gc {:enabled? true
                :grace-period-ms 60000}
    :max-string-length 0
