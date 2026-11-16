@@ -101,6 +101,20 @@
       (with-db [node file-cfg]
         (t/is (= 1 (count (get-feeds-since node 0))))))))
 
+(t/deftest test-lmdb-storage
+  (with-tmp-dir tmp-dir
+    (let [lmdb-dir (io/file tmp-dir "lmdb")
+          lmdb-cfg (-> db-config
+                       (assoc :store {:backend :lmdb
+                                      :path (str lmdb-dir)
+                                      :id (java.util.UUID/randomUUID)}))]
+      (with-db [node lmdb-cfg]
+        (t/is (put-feed! node "lmdb-persisted")))
+      (t/is (.exists (io/file lmdb-dir "data.mdb"))
+            "LMDB data file was created")
+      (with-db [node lmdb-cfg]
+        (t/is (= 1 (count (get-feeds-since node 0))))))))
+
 (t/deftest test-last-feed-time
   (with-db [node (mem-db-config)]
     (let [now (unix-time (tc/now))
@@ -150,8 +164,9 @@
   (with-tmp-dir tmp-dir
     (let [db-dir (io/file tmp-dir "db")
           file-cfg (-> db-config
-                       (assoc-in [:store :path] (str db-dir))
-                       (assoc-in [:store :id] (java.util.UUID/randomUUID))
+                       (assoc :store {:backend :file
+                                      :path (str db-dir)
+                                      :id (java.util.UUID/randomUUID)})
                        (assoc-in [:index-config :branching-factor] 8))
           ksv-count (fn []
                       (count

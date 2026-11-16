@@ -1,3 +1,3 @@
 #!/bin/sh
 
-clojure -J-server -M -m incidents.core "$@"
+clojure -J-server -J--enable-native-access=ALL-UNNAMED -M -m incidents.core "$@"

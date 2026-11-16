@@ -2,6 +2,7 @@
   (:require [clojure.edn :as edn]
             [clojure.java.io :as io]
             [datahike.api :as d]
+            [datahike-lmdb.core]
             [incidents.parse :as parse]
             [taoensso.telemere :as tel]
             [taoensso.trove :as trove]
@@ -75,16 +76,17 @@
     :db/cardinality :db.cardinality/one}])
 
 (def db-config
-  {:store {:backend :file
-           :path "data"
-           :id #uuid "7c9e6679-7425-40de-944b-e07fc1f90ae7"}
+  {:store {:backend :lmdb
+           :path "data/lmdb"
+           :id #uuid "7c9e6679-7425-40de-944b-e07fc1f90ae7"
+           :map-size (* 10 1024 1024 1024)}
    :schema-flexibility :write
    :attribute-refs? true
    :keep-history? false
    :commit-graph? false
    :fuse-index-roots? true
    :online-gc {:enabled? true
-               :grace-period-ms 60000}
+               :grace-period-ms 0}
    :max-string-length 0
    :initial-tx schema})
 
