@@ -23,7 +23,7 @@
                                      (swap! start-count inc))
                                    (apply orig-start-db! args))
                     feed-url (io/resource "incidents/feed-1.xml")
-                    chime/chime-at (fn [_ f] (swap! schedules conj f) nil)
+                    chime/chime-at (fn [_ f & _] (swap! schedules conj f) nil)
                     wait-forever (fn []
                                    (t/is (= 2 (count @schedules)))
                                    (let [[load-fn clerk-fn] @schedules]
@@ -39,3 +39,22 @@
                                             (count (db/get-all-facts node))))]
         ((get disconnected-actions "server") ["60" "300" out-dir])
         (t/is (= 1 @start-count))))))
+
+(t/deftest test-server-error-handler
+  (with-tmp-dir tmp-dir
+    (let [file-cfg (-> db/db-config
+                       (assoc-in [:store :path] (str (io/file tmp-dir "db")))
+                       (assoc-in [:store :id] (java.util.UUID/randomUUID)))
+          out-dir (str (io/file tmp-dir "out"))
+          options (atom [])]
+      (with-redefs [db/db-config file-cfg
+                    chime/chime-at (fn [_ _ & [opts]]
+                                     (swap! options conj opts)
+                                     nil)
+                    wait-forever (fn [] nil)]
+        ((get disconnected-actions "server") ["60" "300" out-dir])
+        (t/is (= 2 (count @options)))
+        (doseq [opt @options]
+          (t/is (fn? (:error-handler opt)))
+          (t/is (true? ((:error-handler opt)
+                        (Exception. "simulated failure")))))))))

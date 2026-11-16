@@ -1,6 +1,7 @@
 (ns incidents.db
   (:require [clojure.edn :as edn]
             [clojure.java.io :as io]
+            [clojure.string :as str]
             [datahike.api :as d]
             [datahike-lmdb.core]
             [incidents.parse :as parse]
@@ -227,11 +228,32 @@
       make-feed-tx
       (d/transact node)))))
 
+(defn fetch-feed
+  ([source]
+   (fetch-feed source 10000 30000))
+  ([source conn-timeout read-timeout]
+   (try
+     (let [content (slurp source
+                          :conn-timeout conn-timeout
+                          :read-timeout read-timeout)]
+       (if (str/blank? content)
+         (do
+           (tel/log!
+            {:level :warn
+             :data {:msg "Feed response was empty or blank"
+                    :source (str source)}})
+           nil)
+         content))
+     (catch Throwable t
+       (tel/log!
+        {:level :error
+         :data {:msg "Failed to fetch feed" :source (str source)}
+         :error t})
+       nil))))
+
 (defn load-feed! [node source]
-  (->>
-   source
-   slurp
-   (put-feed! node)))
+  (when-let [content (fetch-feed source)]
+    (put-feed! node content)))
 
 (def feed-batch-size 100)
 

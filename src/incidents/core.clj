@@ -56,19 +56,27 @@
 (defn server [[ingest-seconds clerk-seconds output-dir]]
   (tel/log! :info "Starting server.")
   (db/with-shared-db []
-    (let [load-schedule (chime/chime-at
+    (let [error-handler (fn [e]
+                          (tel/log!
+                           {:level :error
+                            :data {:msg "Scheduled task failure"}
+                            :error e})
+                          true)
+          load-schedule (chime/chime-at
                          (chime/periodic-seq
                           (tc/now)
                           (tc/of-seconds (parse-long ingest-seconds)))
                          (fn [time]
                            (db/with-db [node]
-                             (load-and-report node [output-dir]))))
+                             (load-and-report node [output-dir])))
+                         {:error-handler error-handler})
           clerk-schedule (chime/chime-at
                           (chime/periodic-seq
                            (tc/now)
                            (tc/of-seconds (parse-long clerk-seconds)))
                           (fn [time]
-                            (report/build-clerk! output-dir)))]
+                            (report/build-clerk! output-dir))
+                          {:error-handler error-handler})]
       (wait-forever))))
 
 (def connected-report-actions

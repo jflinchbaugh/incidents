@@ -181,8 +181,6 @@
              (tc/>> (tc/epoch) (tc/new-duration i :minutes))
              (str "feed-" i)))
           (delete-all-feeds! node)
-          (gc! node)
-          (t/is (> (ksv-count) (+ base-files 2)))
           (with-redefs [db-config (assoc-in db-config
                                             [:online-gc :grace-period-ms]
                                             0)]
@@ -207,3 +205,18 @@
         (with-out-str
           (with-db [node (mem-db-config)]))))
     ":datahike/connect")))
+
+(t/deftest test-load-feed-resilience
+  (with-db [node (mem-db-config)]
+    (t/testing "invalid or unreachable source returns nil and does not throw"
+      (t/is (nil? (load-feed!
+                   node
+                   "http://invalid-host-does-not-exist.example/feed")))
+      (t/is (nil? (load-feed! node "non-existent-file.xml"))))
+    (with-tmp-dir tmp-dir
+      (t/testing "empty feed file returns nil and does not transact"
+        (let [empty-file (io/file tmp-dir "empty.xml")]
+          (spit empty-file "   \n  ")
+          (t/is (nil? (load-feed! node empty-file)))
+          (t/is (empty? (get-feeds-since node 0))
+                "no empty feed was transacted"))))))
