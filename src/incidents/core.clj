@@ -3,9 +3,12 @@
   (:require [chime.core :as chime]
             [clojure.string :as str]
             [incidents.db :as db]
+            [incidents.log :as log]
             [incidents.report :as report]
             [taoensso.telemere :as tel]
             [tick.core :as tc]))
+
+(log/init!)
 
 (def feed-url "https://webcad.lcwc911.us/Pages/Public/LiveIncidentsFeed.aspx")
 

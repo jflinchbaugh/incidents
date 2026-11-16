@@ -1,5 +1,6 @@
 (ns incidents.db-test
-  (:require [incidents.db :refer :all]
+  (:require [incidents.core]
+            [incidents.db :refer :all]
             [clojure.test :as t]
             [tick.core :as tc]
             [datahike.api :as d]

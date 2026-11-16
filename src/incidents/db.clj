@@ -6,12 +6,7 @@
             [konserve-jdbc.core :as k-jdbc]
             [incidents.parse :as parse]
             [taoensso.telemere :as tel]
-            [taoensso.trove :as trove]
-            [taoensso.trove.telemere :as trove-telemere]
             [tick.core :as tc]))
-
-(trove/set-log-fn! (trove-telemere/get-log-fn))
-(tel/set-ns-filter! #{"incidents.*"})
 
 (def schema
   [{:db/ident :incidents.feed/id
