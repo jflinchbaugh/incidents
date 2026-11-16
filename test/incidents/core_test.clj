@@ -26,19 +26,29 @@
                     chime/chime-at (fn [_ f & _] (swap! schedules conj f) nil)
                     wait-forever (fn []
                                    (t/is (= 2 (count @schedules)))
+                                   (t/is (nil? @db/db-conn)
+                                         "db is closed when server is idle")
                                    (let [[load-fn clerk-fn] @schedules]
                                      (load-fn (tc/now))
+                                     (t/is (nil? @db/db-conn)
+                                           "db closed after load-fn")
                                      (t/is (= 3 (clerk-fn (tc/now))))
+                                     (t/is (nil? @db/db-conn)
+                                           "db closed after clerk-fn")
                                      (with-redefs [feed-url
                                                    (io/resource
                                                     "incidents/feed-2.xml")]
                                        (load-fn (tc/now))
-                                       (t/is (= 4 (clerk-fn (tc/now)))))))
+                                       (t/is (nil? @db/db-conn)
+                                             "db closed after second load-fn")
+                                       (t/is (= 4 (clerk-fn (tc/now))))
+                                       (t/is (nil? @db/db-conn)
+                                             "db closed after 2nd clerk-fn"))))
                     report/build-clerk! (fn [_]
                                           (db/with-db [node]
                                             (count (db/get-all-facts node))))]
         ((get disconnected-actions "server") ["60" "300" out-dir])
-        (t/is (= 1 @start-count))))))
+        (t/is (= 4 @start-count) "db is opened and closed per event")))))
 
 (t/deftest test-server-error-handler
   (with-tmp-dir tmp-dir
