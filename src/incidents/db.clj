@@ -53,7 +53,8 @@
     :db/cardinality :db.cardinality/one}
    {:db/ident :incidents.fact/active?
     :db/valueType :db.type/boolean
-    :db/cardinality :db.cardinality/one}
+    :db/cardinality :db.cardinality/one
+    :db/index true}
    {:db/ident :incidents.fact/title
     :db/valueType :db.type/string
     :db/cardinality :db.cardinality/one}

@@ -84,6 +84,7 @@
   (with-db [node (mem-db-config)]
     (t/is node "node is open")
     (t/is (:fuse-index-roots? (:config (d/db node))))
+    (t/is (get-in (d/db node) [:schema :incidents.fact/active? :db/index]))
     (t/is (number? (get-in (d/db node)
                            [:ident-ref-map :incidents.feed/doc])))
     (t/is (thrown? Exception
