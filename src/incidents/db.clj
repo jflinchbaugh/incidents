@@ -77,7 +77,7 @@
 
 (def db-config
   {:store {:backend :lmdb
-           :path "data/lmdb"
+           :path "data"
            :id #uuid "7c9e6679-7425-40de-944b-e07fc1f90ae7"
            :map-size (* 10 1024 1024 1024)}
    :schema-flexibility :write
